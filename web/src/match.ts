@@ -123,12 +123,13 @@ export class Match {
           if (a === this.localHandle) {
             effects.addShake(0.12);
             audio.play('hurt');
-            navigator.vibrate?.(15);
+            navigator.vibrate?.(25);
           }
           break;
         case EventKind.Down:
           toast(a === this.localHandle ? '쓰러짐! 동료가 와서 살려줘야 함' : `${a + 1}P 쓰러짐 — 가서 살려주기`);
           audio.play('down');
+          if (a === this.localHandle) navigator.vibrate?.([60, 40, 60]);
           break;
         case EventKind.Revive:
           toast(`${a + 1}P 부활`);
