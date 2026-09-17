@@ -20,10 +20,9 @@ jobs:
         run: |
           V=$(cargo metadata --format-version 1 --locked | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
           cargo install wasm-bindgen-cli --version "$V" --locked
-      - run: sudo apt-get update && sudo apt-get install -y binaryen
       - run: cargo build -p hg-web --target wasm32-unknown-unknown --release
-      - run: |
-          wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
+      # wasm-opt intentionally skipped: see docs/design-docs/wasm-boundary.md#wasm-opt
+      - run: wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
       - name: build site
         working-directory: web
         env:

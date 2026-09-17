@@ -8,11 +8,16 @@ JS↔WASM 경계는 **`Game` 객체 하나**. 프레임당 경계 호출은 상�
 ```bash
 cargo build -p hg-web --target wasm32-unknown-unknown --release
 wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
-wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types -o web/src/wasm-pkg/hg_web_bg.wasm web/src/wasm-pkg/hg_web_bg.wasm
 ```
 - `wasm-bindgen-cli` 버전 == `Cargo.lock`의 `wasm-bindgen` 버전 (불일치 시 빌드 실패). CI에서 lock에서 읽어 설치
-- `--enable-reference-types` 필수: wasm-bindgen 0.2.9x+는 externref 테이블로 JS 값을 넘기는데, 이 플래그 없이 wasm-opt를 돌리면 테이블 경계가 깨져 런타임에 `WebAssembly.Table.grow(): failed to grow table by N`으로 죽는다
 - ggrs는 `features = ["wasm-bindgen"]` (getrandom 0.2 `js` + `instant` wasm 활성). `instant`는 RUSTSEC unmaintained 권고 대상 → `deny.toml` 예외 + TD-007
+
+### wasm-opt
+**현재 CI/justfile에서 의도적으로 뺐다.** wasm-bindgen 0.2.128 출력은 테이블이 2개다 (`table[0]` funcref 함수 테이블, `table[1]` anyref — JS 값을 담는 `__wbindgen_externrefs` export). Ubuntu apt의 binaryen 108로 `wasm-opt -O3`를 돌리면 이 export가 `table[1]`이 아니라 크기 고정(`initial=max=235`)인 `table[0]`을 가리키도록 잘못 재매핑됨 — `wasm-objdump -x`로 최적화 전/후 비교해서 확인함. 결과적으로 모듈 초기화 시 `__wbindgen_init_externref_table`의 `table.grow(4)`가 즉시 실패:
+```
+RangeError: WebAssembly.Table.grow(): failed to grow table by 4
+```
+전체 페이지가 로드되지 않는 치명적 버그라 최적화보다 우선순위가 낮다. 미적용 `.wasm`은 gzip ~115KiB로 예산(400KiB, [performance.md](performance.md)) 안에 들어오므로 당장 급하지 않음. 재도입하려면: apt 대신 GitHub Releases의 최신 binaryen(>108) 바이너리를 pin해서 이 버그가 고쳐졌는지 먼저 `wasm-objdump -x`로 export 테이블 인덱스를 확인한 뒤에.
 
 ## `Game` API (crates/web)
 ```rust

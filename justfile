@@ -18,7 +18,7 @@ netsim:
 wasm profile="release":
     cargo build -p hg-web --target wasm32-unknown-unknown {{ if profile == "release" { "--release" } else { "" } }}
     wasm-bindgen --target web --out-dir {{wasm_out}} target/wasm32-unknown-unknown/{{profile}}/hg_web.wasm
-    if command -v wasm-opt >/dev/null && [ "{{profile}}" = "release" ]; then wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types -o {{wasm_out}}/hg_web_bg.wasm {{wasm_out}}/hg_web_bg.wasm; fi
+    # wasm-opt intentionally skipped: see docs/design-docs/wasm-boundary.md#wasm-opt (apt binaryen 108 corrupts the __wbindgen_externrefs table export)
 
 dev: (wasm "debug")
     cd web && npx vite

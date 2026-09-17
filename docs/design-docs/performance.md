@@ -40,7 +40,7 @@ Status: Accepted · Date: 2026-09-16
 | 기법 | 적용 조건 |
 |---|---|
 | `[profile.release] lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `opt-level = 3` | 기본 적용 |
-| `wasm-opt -O3` (크기보다 속도) | 기본 적용. `.wasm` gzip ≤ 400KiB 넘으면 재검토 |
+| `wasm-opt -O3` (크기보다 속도) | **비활성** — Ubuntu apt binaryen 108이 wasm-bindgen 멀티테이블(`__wbindgen_externrefs`) export를 funcref 테이블로 잘못 재매핑해 런타임에 `Table.grow` 실패 → [wasm-boundary.md](wasm-boundary.md#wasm-opt) 참고. 미적용 상태로도 `.wasm` gzip ~115KiB로 예산(400KiB) 이내라 급하지 않음. 재활성화하려면 apt 대신 최신 binaryen(>108) 바이너리를 pin해서 버그 수정 여부 먼저 확인 |
 | wasm **simd128** (`-C target-feature=+simd128`) | 분리력·거리 계산 루프에서 bench로 ≥15% 이득 확인 시. Safari 16.4+ 필요 → [FRONTEND.md](../FRONTEND.md) 지원 매트릭스 |
 | alive 비트셋 + `trailing_zeros` 순회 | 적 생존률 < 50% 구간이 bench에서 병목일 때 |
 | 분기 제거(branchless min/max, 테이블 룩업) | 핫루프 프로파일에서 분기 예측 실패 확인 시 |
