@@ -1,0 +1,25 @@
+[package]
+name = "hg-net"
+description = "GGRS rollback session glue for hordegrid"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+wasm = ["ggrs/wasm-bindgen"]
+
+[dependencies]
+hg-sim.workspace = true
+ggrs = { version = "0.13", default-features = false }
+postcard.workspace = true
+serde.workspace = true
+bytemuck.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

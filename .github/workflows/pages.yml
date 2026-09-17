@@ -1,0 +1,49 @@
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: pages, cancel-in-progress: true }
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup toolchain install 1.95.0 --profile minimal -c clippy,rustfmt -t wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: wasm-bindgen (version pinned to Cargo.lock)
+        run: |
+          V=$(cargo metadata --format-version 1 --locked | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
+          cargo install wasm-bindgen-cli --version "$V" --locked
+      - run: sudo apt-get update && sudo apt-get install -y binaryen
+      - run: cargo build -p hg-web --target wasm32-unknown-unknown --release
+      - run: |
+          wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
+          wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int -o web/src/wasm-pkg/hg_web_bg.wasm web/src/wasm-pkg/hg_web_bg.wasm || echo "wasm-opt skipped"
+      - name: build site
+        working-directory: web
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BUILD_HASH: ${{ github.sha }}
+        run: |
+          npm ci
+          npm run build
+          mkdir -p dist/probe && cp ../tools/net-probe/dist/index.html dist/probe/ 2>/dev/null || true
+      - uses: actions/upload-pages-artifact@v4
+        with: { path: web/dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url }}' }
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

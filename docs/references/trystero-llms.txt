@@ -1,0 +1,44 @@
+# Trystero — serverless WebRTC matchmaking
+# VERIFIED 2026-09-16 by reading the published type definitions of trystero@0.25.4
+#   (node_modules/@trystero-p2p/core/dist/types.d.mts, peer.mjs; @trystero-p2p/nostr/dist/index.mjs)
+# and by running tools/net-probe two-tab E2E. The README API (tuple-returning makeAction) is OUTDATED.
+# Pin "trystero": "0.25.4" in web/package.json. On upgrade, re-read types.d.mts and update this file.
+
+## Packages
+trystero@0.25.4  -> re-exports @trystero-p2p/nostr (default strategy). Other strategies: trystero/{torrent,mqtt,ipfs,firebase,supabase}
+import { joinRoom, selfId, getRelaySockets, defaultRelayUrls } from 'trystero'
+
+## joinRoom(config, roomId, callbacks?) -> Room
+type JoinRoomConfig = {
+  appId: string;
+  password?: string;                  // encrypts SDP on the relay
+  passive?: boolean;
+  relayConfig?: { urls?: string[]; redundancy?: number; manualReconnection?: boolean; warnOnRelayFailure?: boolean };
+  trickleIce?: boolean;
+  rtcConfig?: RTCConfiguration;       // spread AFTER iceServers -> passing rtcConfig.iceServers REPLACES defaults
+  turnConfig?: { urls: string | string[]; username?: string; credential?: string; credentialType?: string }[];  // appended to default STUN
+  rtcPolyfill?: typeof RTCPeerConnection;
+}
+type JoinRoomCallbacks = { onJoinError?: (d: {error, appId, roomId, peerId}) => void; onPeerHandshake?: (peerId, send, receive, isInitiator) => Promise<void>; handshakeTimeoutMs?: number }
+
+Defaults (source): iceServers = stun:stun.l.google.com:19302, stun1.l..., stun2.l..., stun:stun.cloudflare.com:3478
+Nostr: defaultRelayUrls = 28 public relays, redundancy default 5. ICE timeout 15s; disconnected->close after 5s.
+
+## Room (callbacks are ASSIGNED PROPERTIES, not functions you call)
+room.onPeerJoin  = (peerId) => {}
+room.onPeerLeave = (peerId) => {}
+room.getPeers(): Record<string, RTCPeerConnection>
+room.ping(peerId): Promise<number>
+room.leave(): Promise<void>
+const action = room.makeAction<T>('lobby')            // MessageAction<T>
+  action.send(data, { target?: peerId | peerId[] | null, metadata?, onProgress?, signal? }): Promise<void>
+  action.onMessage = (data, { peerId, metadata }) => {}
+const rpc = room.makeAction<T,R>('name', { kind: 'request', ... })   // RequestAction: request / requestMany / onRequest
+DataPayload = JSON value | Blob | ArrayBuffer | ArrayBufferView
+
+## Internals that matter to us (from peer.mjs 0.25.4)
+- trystero's own channel: pc.createDataChannel("data") — NON-negotiated, default reliable+ordered, created by initiator
+- our game channel: pc.createDataChannel('ggrs', { negotiated: true, id: 101, ordered: false, maxRetransmits: 0 })
+  created on BOTH sides inside onPeerJoin -> opened in ~10ms in Chromium E2E. No collision observed.
+- onPeerJoin fires only after trystero's channel is open => failed ICE never surfaces as an event (no "peer seen but failed").
+- getRelaySockets(): Record<url, WebSocket> -> count readyState===1 for relay health UI

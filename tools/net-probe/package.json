@@ -1,0 +1,13 @@
+{
+  "name": "hordegrid-net-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "relay": "node test/dev-relay.mjs",
+    "serve": "http-server dist -p 8765 -s",
+    "e2e": "node test/two-tab.e2e.mjs"
+  },
+  "dependencies": { "trystero": "0.25.4" },
+  "devDependencies": { "esbuild": "^0.25.0", "http-server": "^14.1.1", "playwright": "^1.55.0", "ws": "^8.18.0" }
+}

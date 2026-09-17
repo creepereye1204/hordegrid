@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%234fd1ff'/></svg>">
+<title>hordegrid 연결 실측</title>
+<style>
+:root { --bg:#0e0f13; --card:#171922; --fg:#f1f1f1; --dim:#8a8f9c; --good:#7dff6a; --warn:#ffcf3f; --bad:#ff5f5f; --acc:#4fd1ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif; padding: max(16px, env(safe-area-inset-top)) 16px 32px; }
+main { max-width: 640px; margin: 0 auto; display:grid; gap:14px; }
+h1 { font-size:20px; margin:4px 0 0; } h2 { font-size:15px; margin:0 0 8px; color:var(--dim); font-weight:600; }
+.card { background:var(--card); border-radius:12px; padding:14px; }
+.verdict { font-weight:700; font-size:16px; } .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+.small { color:var(--dim); font-size:13px; }
+.row { display:flex; gap:8px; flex-wrap:wrap; }
+button { background:var(--acc); color:#001018; border:0; border-radius:10px; padding:12px 16px; font-weight:700; font-size:15px; min-height:48px; flex:1; }
+button.sec { background:#2a2e3b; color:var(--fg); }
+input, textarea { width:100%; background:#0b0c10; color:var(--fg); border:1px solid #2a2e3b; border-radius:10px; padding:12px; font:inherit; }
+input#codeIn { font-size:22px; letter-spacing:4px; text-align:center; flex:2; min-width:0; }
+.code { font: 700 36px/1.1 ui-monospace, monospace; letter-spacing:4px; text-align:center; margin:6px 0 10px; }
+.pill { display:inline-block; padding:2px 8px; border-radius:99px; background:#2a2e3b; font-size:12px; }
+.pill.good{background:#1f3a1c} .pill.bad{background:#3d1a1a}
+.peer { border-top:1px solid #2a2e3b; padding-top:10px; margin-top:10px; }
+.peer-h { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+dl { display:grid; grid-template-columns: 96px 1fr; gap:4px 8px; margin:8px 0 0; font-size:14px; } dt{color:var(--dim)} dd{margin:0; word-break:break-word}
+textarea { font:12px/1.4 ui-monospace, monospace; height:140px; }
+#log { font:12px/1.5 ui-monospace, monospace; color:var(--dim); max-height:160px; overflow:auto; }
+.banner { background:#3a2e10; color:var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>hordegrid 연결 실측 도구</h1>
+  <div class="small">서버 없이 두 기기가 직접 붙는지, 붙으면 게임용 비신뢰 채널 품질이 어떤지 잰다. 모든 데이터는 기기 간 직접 전송.</div>
+
+  <div id="inapp" class="card banner" hidden>인앱 브라우저 감지 — 결과가 실제 브라우저와 다를 수 있음. 가능하면 Safari/Chrome으로 열기.</div>
+
+  <section class="card">
+    <h2>1. 내 네트워크</h2>
+    <div id="env" class="small"></div>
+    <div id="natVerdict" class="verdict">준비 중…</div>
+    <div id="natDetail" class="small"></div>
+  </section>
+
+  <section class="card">
+    <h2>2. 친구와 연결 테스트</h2>
+    <div class="row"><button id="create">방 만들기</button></div>
+    <div class="row" style="margin-top:8px">
+      <input id="codeIn" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="0000 0000">
+      <button id="join" class="sec">참가</button>
+    </div>
+    <div id="roomBox" hidden style="margin-top:12px">
+      <div class="code" id="codeShow"></div>
+      <div class="row"><input id="linkShow" readonly><button id="copyLink" class="sec" style="flex:0 0 auto">링크 복사</button></div>
+      <div class="row" style="margin-top:8px;align-items:center;justify-content:space-between"><span id="relays" class="pill">릴레이 확인 중</span><button id="retest" class="sec" style="flex:0 0 auto;min-height:36px;padding:6px 12px">다시 측정</button></div>
+      <div id="waitHint" class="small" style="margin-top:6px"></div>
+      <div id="peers"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3. 결과 기록</h2>
+    <div class="small">아래 표 행을 docs의 연결 실측표에 붙여넣기. 전체 JSON은 이슈 첨부용.</div>
+    <textarea id="mdRow" readonly style="height:70px"></textarea>
+    <div class="row" style="margin:6px 0 10px"><button id="copyRow" class="sec">표 행 복사</button></div>
+    <textarea id="report" readonly></textarea>
+    <div class="row" style="margin-top:6px"><button id="copyReport" class="sec">JSON 복사</button></div>
+  </section>
+
+  <section class="card"><h2>로그</h2><div id="log"></div></section>
+</main>
+<script>/*BUNDLE*/</script>
+</body>
+</html>

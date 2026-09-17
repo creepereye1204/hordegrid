@@ -1,0 +1,18 @@
+# GitHub Pages deployment notes for hordegrid
+# Checked 2026-09-16. Source: https://docs.github.com/en/pages , actions: actions/configure-pages, actions/upload-pages-artifact, actions/deploy-pages
+# Pin third-party/first-party actions by commit SHA; look up the current major versions when writing the workflow.
+
+## Deploy via Actions (Settings > Pages > Source: GitHub Actions)
+permissions: { contents: read, pages: write, id-token: write }
+steps: checkout -> build -> actions/configure-pages -> actions/upload-pages-artifact (path: web/dist) -> job deploy: actions/deploy-pages
+environment: github-pages
+
+## Hard constraints that shape our design
+- Project site URL: https://<user>.github.io/<repo>/  -> Vite `base: '/<repo>/'`, all asset URLs relative to base
+- NO custom HTTP headers -> no COOP/COEP -> no SharedArrayBuffer / wasm threads; CSP only via <meta>
+- NO server-side routing -> use hash routing (#/r/CODE); a 404.html SPA hack is unnecessary with hash routes
+- Cache-Control is set by GitHub (short max-age) -> use hashed filenames; buildHash check in lobby
+- HTTPS enforced on github.io -> WebRTC/getUserMedia-style secure-context APIs OK; Wake Lock/Service Worker OK
+- .wasm served as application/wasm -> WebAssembly.instantiateStreaming works
+- Published site size and bandwidth have soft limits (docs: "Usage limits") -> keep dist small (budgets in QUALITY_SCORE.md)
+- Public repo required for Pages on free plan

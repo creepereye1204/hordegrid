@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' wss: stun: ws://127.0.0.1:* ws://localhost:*; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'">
+<meta name="theme-color" content="#0e0f13">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230e0f13'/><rect x='3' y='3' width='10' height='10' fill='%238f9a6e'/><circle cx='8' cy='8' r='2.5' fill='%234fd1ff'/></svg>">
+<title>hordegrid</title>
+</head>
+<body>
+<canvas id="game" aria-label="게임 화면"></canvas>
+
+<section id="screen-loading" class="screen center">
+  <div class="logo">HORDE<span>GRID</span></div>
+  <p class="dim" id="loading-text">불러오는 중…</p>
+</section>
+
+<section id="screen-title" class="screen center" hidden>
+  <div class="logo">HORDE<span>GRID</span></div>
+  <p class="tagline">링크 하나로 친구와 좀비 떼를 쓸어버리는 협동 서바이벌</p>
+  <div class="stack">
+    <button id="btn-create" class="primary">방 만들기</button>
+    <form id="form-join" class="row">
+      <input id="join-code" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="0000 0000" aria-label="초대코드 8자리">
+      <button type="submit">참가</button>
+    </form>
+    <button id="btn-solo" class="ghost">혼자 연습</button>
+  </div>
+  <label class="name-row">닉네임 <input id="nickname" maxlength="16"></label>
+  <p class="dim small" id="title-msg" role="status"></p>
+  <p class="dim tiny">서버 없음 · 브라우저끼리 직접 연결 · 방에 들어온 사람에게 내 IP가 보일 수 있음</p>
+</section>
+
+<section id="screen-lobby" class="screen center" hidden>
+  <div class="lobby-card">
+    <div class="dim small">초대코드</div>
+    <div id="lobby-code" class="code">---- ----</div>
+    <div class="row">
+      <input id="lobby-link" readonly aria-label="초대 링크">
+      <button id="btn-copy" class="ghost">링크 복사</button>
+    </div>
+    <ul id="lobby-members" class="members"></ul>
+    <div id="knocks" class="knocks"></div>
+    <p id="lobby-status" class="dim small" role="status"></p>
+    <div class="row">
+      <button id="btn-leave" class="ghost">나가기</button>
+      <button id="btn-ready" class="primary" hidden>준비</button>
+      <button id="btn-start" class="primary" hidden disabled>시작</button>
+    </div>
+  </div>
+</section>
+
+<div id="hud" hidden>
+  <div class="hud-tl"><span id="hud-wave">WAVE 1</span><span id="hud-score">0</span></div>
+  <div class="hud-tr"><span id="hud-combo"></span><span id="hud-net" class="dim"></span></div>
+  <div class="hud-bottom"><span id="hud-weapon">권총</span></div>
+  <div id="banner" class="banner" hidden></div>
+  <div id="toasts" class="toasts"></div>
+  <button id="btn-menu" class="hud-menu" aria-label="메뉴">❚❚</button>
+</div>
+
+<div id="touch" hidden>
+  <div id="stick-base" class="stick" hidden><div id="stick-knob" class="knob"></div></div>
+  <div class="touch-buttons">
+    <button data-action="next" class="tbtn small-btn" aria-label="무기 교체">⇄</button>
+    <button data-action="fire" class="tbtn fire-btn" aria-label="발사">발사</button>
+  </div>
+</div>
+
+<section id="screen-over" class="screen center overlay" hidden>
+  <h2>전멸</h2>
+  <p id="over-summary"></p>
+  <ul id="over-players" class="members"></ul>
+  <div class="row">
+    <button id="btn-over-primary" class="primary">다시</button>
+    <button id="btn-over-title" class="ghost">타이틀로</button>
+  </div>
+  <p id="over-wait" class="dim small" hidden>방장이 로비로 돌아가길 기다리는 중…</p>
+</section>
+
+<section id="screen-menu" class="screen center overlay" hidden>
+  <h2>일시정지</h2>
+  <div class="stack">
+    <button id="btn-resume" class="primary">계속</button>
+    <button id="btn-mute" class="ghost">소리 끄기</button>
+    <button id="btn-quit" class="ghost">게임 나가기</button>
+  </div>
+</section>
+
+<div id="rotate" class="screen center overlay" hidden><p>기기를 가로로 돌려주세요</p></div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

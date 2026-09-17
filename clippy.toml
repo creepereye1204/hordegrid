@@ -1,0 +1,7 @@
+# Determinism guards — see docs/design-docs/determinism.md
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is nondeterministic" },
+  { path = "std::collections::HashSet", reason = "iteration order is nondeterministic" },
+  { path = "std::time::Instant", reason = "sim must not read time" },
+  { path = "std::time::SystemTime", reason = "sim must not read time" },
+]

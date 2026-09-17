@@ -1,0 +1,21 @@
+[package]
+name = "hg-web"
+description = "wasm-bindgen boundary for hordegrid"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hg-sim.workspace = true
+hg-net.workspace = true
+wasm-bindgen.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+hg-net = { workspace = true, features = ["wasm"] }
+
+[lints]
+workspace = true

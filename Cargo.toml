@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = ["crates/sim", "crates/net", "crates/web"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+rust-version = "1.87"
+
+[workspace.dependencies]
+bytemuck = { version = "1", features = ["derive", "min_const_generics", "extern_crate_alloc"] }
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+ggrs = { version = "0.13", features = ["wasm-bindgen"] }
+postcard = { version = "1", default-features = false, features = ["alloc"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+wasm-bindgen = "0.2"
+proptest = "1"
+hg-sim = { path = "crates/sim" }
+hg-net = { path = "crates/net" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+float_arithmetic = "deny"
+# pedantic lints that fight fixed-point/game code; each is justified here once
+cast_possible_truncation = "allow"   # tile/index narrowing is bounds-checked by map dims
+cast_sign_loss = "allow"             # same
+cast_possible_wrap = "allow"         # u16 input bits <-> i32 view
+cast_lossless = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"              # x/y, dx/dy pairs
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+overflow-checks = true
+
+[profile.test]
+overflow-checks = true

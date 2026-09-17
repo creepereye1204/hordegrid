@@ -1,0 +1,78 @@
+# GGRS — P2P rollback networking for Rust (GGPO reimagined)
+# Verified against docs.rs ggrs 0.13.0 (released 2026-06-26) on 2026-09-16.
+# Source: https://docs.rs/ggrs/0.13.0/ggrs/ , https://github.com/gschup/ggrs
+# If Cargo.lock shows a different version, re-verify every signature below before coding.
+
+## Cargo
+ggrs = { version = "0.13", features = ["wasm-bindgen"] }
+# features (none default): getrandom | sync-send | wasm-bindgen (= getrandom 0.2 "js" + instant "wasm-bindgen")
+# NOTE: `instant` is flagged unmaintained by RustSec -> cargo-deny exception tracked as TD-007.
+
+## Config (compile-time parameterization)
+pub trait Config: 'static {
+    type Input: Copy + Clone + PartialEq + Default + Serialize + DeserializeOwned;
+    type InputPredictor: InputPredictor<Self::Input>;   // PredictRepeatLast is the documented reasonable default
+    type State;
+    type Address: Clone + PartialEq + Eq + Hash + Debug;
+}
+# Input::default() is what GGRS feeds for disconnected players ("no input").
+
+## Transport
+pub trait NonBlockingSocket<A> where A: Clone + PartialEq + Eq + Hash {
+    fn send_to(&mut self, msg: &Message, addr: &A);
+    fn receive_all_messages(&mut self) -> Vec<(A, Message)>;
+}
+# Expected: discrete, UNORDERED, UNRELIABLE packets. GGRS adds its own reliability/ordering.
+# -> Do NOT put GGRS on an ordered+reliable WebRTC channel (head-of-line blocking).
+# Message serialization for our wire format: postcard via serde (verify Message: Serialize + Deserialize in Phase 1 spike;
+#   if not public-serde, fall back to the crate's own encoding helpers).
+
+## SessionBuilder (names verified; check return types when writing)
+SessionBuilder::<C>::new()
+  .with_num_players(n)                        // usize
+  .with_input_delay(2)                        // u32 frames
+  .with_max_prediction_window(8)              // u32 frames
+  .with_fps(60)
+  .with_desync_detection_mode(DesyncDetection::On { interval: 30 })
+  .add_player(PlayerType::Local, handle)?     // PlayerType::{Local, Remote(addr), Spectator(addr)}
+  .add_player(PlayerType::Remote(addr), handle)?
+  .start_p2p_session(socket)?                 // -> P2PSession<C>
+# Also exists (verify exact names): disconnect timeout / notify start setters.
+
+## P2PSession<C>
+add_local_input(handle, input) -> Result<(), GgrsError>
+advance_frame() -> Result<Vec<GgrsRequest<C>>, GgrsError>   // may Err(PredictionThreshold) -> just skip this tick
+poll_remote_clients()
+events() -> impl Iterator<Item = GgrsEvent<C>>
+network_stats(handle) -> Result<NetworkStats, GgrsError>
+frames_ahead() -> i32
+
+## Requests — MUST be handled in order
+pub enum GgrsRequest<T: Config> {
+    SaveGameState { cell: GameStateCell<T::State>, frame: Frame },
+    LoadGameState { cell: GameStateCell<T::State>, frame: Frame },
+    AdvanceFrame  { inputs: Vec<(T::Input, InputStatus)> },   // InputStatus: Confirmed | Predicted | Disconnected
+}
+GameStateCell<T>:
+  pub fn save(&self, frame: Frame, data: Option<T>, checksum: Option<u128>)
+  pub fn load(&self) -> Option<T>            where T: Clone
+  pub fn data(&self) -> Option<GameStateAccessor<'_, T>>   // no-clone access, niche
+
+## Events
+pub enum GgrsEvent<T: Config> {
+    Synchronizing { addr, total: u32, count: u32 },
+    Synchronized { addr },
+    Disconnected { addr },
+    NetworkInterrupted { addr, disconnect_timeout: u128 },
+    NetworkResumed { addr },
+    WaitRecommendation { skip_frames: u32 },
+    DesyncDetected { frame: Frame, local_checksum: u128, remote_checksum: u128, addr },
+}
+
+## Testing helpers
+SyncTestSession: runs rollbacks locally every frame with check distance -> use in crates/net tests
+  to catch non-determinism before netsim. (builder: start_synctest_session)
+
+## Our mapping (see design-docs/netcode-rollback.md)
+Input=PlayerInput(u16) · Predictor=PredictRepeatLast · State=sim::State (Copy) · Address=PeerSlot(u8)
+checksum = xxh3_64(bytemuck::bytes_of(&state)) as u128

@@ -1,0 +1,33 @@
+# wasm-bindgen + wasm32-unknown-unknown toolchain notes
+# Checked 2026-09-16. Project home moved: rustwasm GitHub org was archived (Rust blog, 2025-07-21);
+# wasm-bindgen now lives at https://github.com/wasm-bindgen/wasm-bindgen . wasm-pack is NOT used in this repo.
+
+## Build (no wasm-pack)
+rustup target add wasm32-unknown-unknown
+cargo build -p hg-web --target wasm32-unknown-unknown --release
+wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
+wasm-opt -O3 -o <out> <in>          # binaryen
+# wasm-bindgen CLI version MUST equal the wasm-bindgen crate version in Cargo.lock, else "schema version mismatch".
+# CI: V=$(cargo metadata --format-version 1 | jq -r '.packages[]|select(.name=="wasm-bindgen").version')
+#     cargo install wasm-bindgen-cli --version "$V" --locked
+
+## crate-type
+[lib] crate-type = ["cdylib", "rlib"]   # rlib so xtask/tests can link it natively
+
+## Patterns we use
+#[wasm_bindgen] pub struct Game { ... }         // opaque handle; JS gets a class with .free()
+#[wasm_bindgen] impl Game { #[wasm_bindgen(constructor)] pub fn new(..) -> Result<Game, JsError> }
+&[u8] param   -> JS Uint8Array copied into wasm memory (one copy)
+Vec<u8> return -> JS Uint8Array (copied out)
+*const i32 / usize return -> JS number (pointer offset into memory)
+JS view:  import init, { Game } from './wasm-pkg/hg_web.js';
+          const wasm = await init();                                  // returns InitOutput with .memory
+          const view = new Int32Array(wasm.memory.buffer, game.render_ptr(), game.render_len());
+# memory.grow() detaches old ArrayBuffers -> rebuild the view every frame (cheap), never cache across frames.
+
+## Release profile (workspace Cargo.toml)
+[profile.release] opt-level = 3, lto = "fat", codegen-units = 1, panic = "abort"
+# SIMD: RUSTFLAGS="-C target-feature=+simd128" only after bench proves gain (performance.md).
+
+## Panics
+console_error_panic_hook in dev builds only. With panic="abort" a panic kills the instance -> treat as fatal, show reload UI.

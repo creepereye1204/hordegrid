@@ -1,0 +1,12 @@
+# bytemuck — safe casting of plain-old-data
+# Checked 2026-09-16. Source: https://docs.rs/bytemuck
+bytemuck = { version = "1", features = ["derive", "min_const_generics"] }
+# min_const_generics: Pod/Zeroable impls for arrays of ANY length [T; N] (needed for [Fixed; 384] etc.)
+
+#[repr(C)] #[derive(Clone, Copy, Pod, Zeroable)] struct S { .. }
+- derive(Pod) FAILS TO COMPILE if the struct has padding, non-Pod fields (bool, char, references, pointers-to-heap, enums w/o repr).
+- #[repr(transparent)] newtypes over Pod are Pod.
+- bytemuck::bytes_of(&s) -> &[u8]          (checksum)
+- bytemuck::Zeroable::zeroed()            (State init: all-zero then init fields)
+- enums: store as u8 + TryFrom<u8>; do not derive Pod on Rust enums.
+- Large State: avoid `let s = State::zeroed();` on stack in wasm hot paths; use Box via bytemuck::zeroed_box() (feature "extern_crate_alloc").

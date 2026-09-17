@@ -1,0 +1,45 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup toolchain install 1.95.0 --profile minimal -c clippy,rustfmt -t wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace --release
+      - name: netsim (hostile network, 4 peers)
+        run: cargo test -p hg-net --release --test netsim -- --include-ignored
+      - name: wasm build check
+        run: cargo build -p hg-web --target wasm32-unknown-unknown --release
+
+  web:
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup toolchain install 1.95.0 --profile minimal -c clippy,rustfmt -t wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: wasm-bindgen (version pinned to Cargo.lock)
+        run: |
+          V=$(cargo metadata --format-version 1 --locked | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
+          cargo install wasm-bindgen-cli --version "$V" --locked
+      - run: cargo build -p hg-web --target wasm32-unknown-unknown --release
+      - run: wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
+      - working-directory: web
+        run: |
+          npm ci
+          npx tsc --noEmit        # type-checks against the REAL generated bindings
+          npx vitest run
+          node scripts/lint-arch.mjs
+          npm run build

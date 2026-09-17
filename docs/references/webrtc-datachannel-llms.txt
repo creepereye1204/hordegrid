@@ -1,0 +1,14 @@
+# WebRTC RTCDataChannel — what we rely on
+# Source: MDN https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createDataChannel , RFC 8831/8832
+pc.createDataChannel(label, {
+  ordered: false,            // no ordering -> no head-of-line blocking
+  maxRetransmits: 0,         // unreliable (mutually exclusive with maxPacketLifeTime)
+  negotiated: true, id: 101  // both peers create with same id; no in-band DCEP, no renegotiation needed
+})
+channel.binaryType = 'arraybuffer'
+- Negotiated channels open when the SCTP association is up (pc must already have an SCTP transport, i.e. any data channel was negotiated in SDP).
+- Message size: keep <= 1200 bytes for game packets (avoid SCTP fragmentation; interop-safe cap is ~16KiB).
+- bufferedAmount: if > 64KiB, drop game packets instead of queueing (stale inputs are worthless).
+- Events: open / close / error. Check readyState === 'open' before send.
+- ICE: STUN only (no TURN) => symmetric-NAT pairs fail. Detect via no 'open' within timeout.
+- Non-trickle manual exchange: wait pc.iceGatheringState === 'complete' before exporting localDescription.
