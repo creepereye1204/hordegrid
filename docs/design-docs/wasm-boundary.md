@@ -8,9 +8,10 @@ JS↔WASM 경계는 **`Game` 객체 하나**. 프레임당 경계 호출은 상�
 ```bash
 cargo build -p hg-web --target wasm32-unknown-unknown --release
 wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
-wasm-opt -O3 --enable-bulk-memory --enable-simd -o web/src/wasm-pkg/hg_web_bg.wasm web/src/wasm-pkg/hg_web_bg.wasm
+wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types -o web/src/wasm-pkg/hg_web_bg.wasm web/src/wasm-pkg/hg_web_bg.wasm
 ```
 - `wasm-bindgen-cli` 버전 == `Cargo.lock`의 `wasm-bindgen` 버전 (불일치 시 빌드 실패). CI에서 lock에서 읽어 설치
+- `--enable-reference-types` 필수: wasm-bindgen 0.2.9x+는 externref 테이블로 JS 값을 넘기는데, 이 플래그 없이 wasm-opt를 돌리면 테이블 경계가 깨져 런타임에 `WebAssembly.Table.grow(): failed to grow table by N`으로 죽는다
 - ggrs는 `features = ["wasm-bindgen"]` (getrandom 0.2 `js` + `instant` wasm 활성). `instant`는 RUSTSEC unmaintained 권고 대상 → `deny.toml` 예외 + TD-007
 
 ## `Game` API (crates/web)
