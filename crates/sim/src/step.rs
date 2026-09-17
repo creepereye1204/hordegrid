@@ -201,7 +201,7 @@ fn fire(s: &mut State, i: usize) {
     let pellets = i32::from(stats.pellets);
     for k in 0..pellets {
         let Some(slot) = (0..MAX_SHOTS).find(|&j| s.shots.ttl[j] == 0) else {
-            return;
+            break;
         };
         let lateral = if pellets > 1 {
             stats.spread.mul_int(k - pellets / 2)
