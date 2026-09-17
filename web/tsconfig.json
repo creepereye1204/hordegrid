@@ -14,7 +14,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@wasm": ["src/wasm-pkg/hg_web.js", "types/hg_web.d.ts"]
+      "@wasm": ["types/hg_web.d.ts"]
     }
   },
   "include": ["src", "types", "test"]
