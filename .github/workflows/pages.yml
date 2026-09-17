@@ -24,7 +24,6 @@ jobs:
       - run: cargo build -p hg-web --target wasm32-unknown-unknown --release
       - run: |
           wasm-bindgen --target web --out-dir web/src/wasm-pkg target/wasm32-unknown-unknown/release/hg_web.wasm
-          wasm-opt -O3 --enable-bulk-memory --enable-nontrapping-float-to-int --enable-reference-types -o web/src/wasm-pkg/hg_web_bg.wasm web/src/wasm-pkg/hg_web_bg.wasm || echo "wasm-opt skipped"
       - name: build site
         working-directory: web
         env:
