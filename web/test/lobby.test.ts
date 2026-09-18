@@ -138,8 +138,9 @@ describe('lobby', () => {
 describe('protocol parsing', () => {
   it('rejects malformed and hostile messages', () => {
     expect(parseLobbyMsg(null)).toBeNull();
-    expect(parseLobbyMsg({ t: 'start', players: ['a'], seed: 1 })).toBeNull();
-    expect(parseLobbyMsg({ t: 'start', players: ['a', 'b'], seed: 1.5 })).toBeNull();
+    expect(parseLobbyMsg({ t: 'start', players: ['a'], seed: 1, mode: 0 })).toBeNull();
+    expect(parseLobbyMsg({ t: 'start', players: ['a', 'b'], seed: 1.5, mode: 0 })).toBeNull();
+    expect(parseLobbyMsg({ t: 'start', players: ['a', 'b'], seed: 1, mode: 2 })).toBeNull();
     expect(parseLobbyMsg({ t: 'deny', reason: 'lol' })).toBeNull();
     expect(parseLobbyMsg({ t: 'roster', members: new Array(5).fill({ id: 'x' }), started: false })).toBeNull();
     const hello = parseLobbyMsg({ t: 'hello', role: 'host', name: '<img src=x>'.repeat(5), proto: PROTO_VER, build: 'x' });

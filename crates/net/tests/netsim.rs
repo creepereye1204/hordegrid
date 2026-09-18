@@ -35,10 +35,11 @@ struct Outcome {
     compared_frames: usize,
 }
 
-fn simulate(players: u8, link: Link, target_frames: i32, seed: u32) -> Outcome {
+fn simulate(players: u8, link: Link, target_frames: i32, seed: u32, mode: u8) -> Outcome {
     let mut peers: Vec<Runner> = (0..players)
         .map(|h| {
-            let mut r = Runner::new(players, h, 0x00C0_FFEE, 0, NetSettings::default()).unwrap();
+            let mut r =
+                Runner::new(players, h, 0x00C0_FFEE, 0, mode, NetSettings::default()).unwrap();
             r.record_checksums(true);
             r
         })
@@ -152,6 +153,7 @@ fn when_two_peers_on_lan_then_confirmed_states_match() {
         },
         240,
         1,
+        0,
     );
     assert_eq!(out.desyncs, 0);
     assert!(
@@ -174,6 +176,7 @@ fn when_four_peers_on_mobile_network_then_confirmed_states_match() {
         },
         240,
         2,
+        0,
     );
     assert_eq!(out.desyncs, 0);
     assert!(
@@ -197,6 +200,33 @@ fn when_hostile_network_then_still_consistent() {
         },
         900,
         3,
+        0,
     );
     assert_eq!(out.desyncs, 0);
+}
+
+#[test]
+fn when_two_peers_play_hide_and_seek_then_confirmed_states_match() {
+    // Same rollback harness, hg_sim::GameMode::HideSeek this time — the netcode layer only ever
+    // rolls back opaque State bytes, but hide_seek adds a new struct to that state, so this
+    // closes the gap the survival-only tests above don't cover.
+    let out = simulate(
+        2,
+        Link {
+            base_ms: 150,
+            jitter_ms: 30,
+            loss_per_mille: 30,
+            dup_per_mille: 10,
+        },
+        400, // past the 300-frame prep window, well into Seeking
+        4,
+        1,
+    );
+    assert_eq!(out.desyncs, 0);
+    assert!(
+        out.compared_frames > 300,
+        "compared {} frames {:?}",
+        out.compared_frames,
+        out.frames
+    );
 }

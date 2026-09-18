@@ -1,5 +1,5 @@
 import {
-  DOWNED_FRAMES, E, ENEMY_STRIDE, enemiesOffset, FIXED_ONE, H, HEADER, Life, MAX_ENEMIES, MAX_PLAYERS, P,
+  DOWNED_FRAMES, E, ENEMY_STRIDE, enemiesOffset, FIXED_ONE, GameMode, H, HEADER, Life, MAX_ENEMIES, MAX_PLAYERS, P,
   PLAYER_STRIDE, REVIVE_FRAMES, S, SHOT_STRIDE, shotsOffset,
 } from '../core/view-layout';
 import type { Effects } from './effects';
@@ -153,6 +153,7 @@ export class Renderer {
       const o = HEADER + i * PLAYER_STRIDE;
       const life = v[o + P.LIFE]!;
       if (life !== Life.Alive && life !== Life.Downed) continue;
+      if (this.hiddenFromLocal(v, local, i)) continue;
       const [x, y] = playerPos(i);
       const sx = (x - ox) * t;
       const sy = (y - oy) * t;
@@ -214,6 +215,20 @@ export class Renderer {
     this.drawOffscreenArrows(v, local, ox, oy, viewW, viewH);
   }
 
+  /**
+   * Hide & seek fog of war: the seeker's client never draws an un-found hider (other than
+   * itself). Everyone else — hiders, and any player in survival mode — sees normally.
+   * The sim already tracks the real occlusion (vision cone + line of sight, crates/sim/src/
+   * hide_seek.rs); this only decides what the *local* screen is allowed to show.
+   */
+  private hiddenFromLocal(v: Int32Array, local: number, i: number): boolean {
+    if (i === local || (v[H.MODE] ?? 0) !== GameMode.HideSeek) return false;
+    const lo = HEADER + local * PLAYER_STRIDE;
+    if (v[lo + P.ROLE] !== 1) return false; // local is a hider: no fog
+    const o = HEADER + i * PLAYER_STRIDE;
+    return v[o + P.ROLE] === 0 && v[o + P.FOUND] === 0;
+  }
+
   private drawFloor(ox: number, oy: number): void {
     const t = this.tile;
     if (!this.floorCache || this.cachedTile !== t) {
@@ -248,6 +263,7 @@ export class Renderer {
       const o = HEADER + i * PLAYER_STRIDE;
       const life = v[o + P.LIFE]!;
       if (life !== Life.Alive && life !== Life.Downed) continue;
+      if (this.hiddenFromLocal(v, local, i)) continue;
       const x = v[o + P.X]! / FIXED_ONE - ox;
       const y = v[o + P.Y]! / FIXED_ONE - oy;
       if (x >= 0 && y >= 0 && x <= viewW && y <= viewH) continue;

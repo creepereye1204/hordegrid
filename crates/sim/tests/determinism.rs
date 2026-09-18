@@ -10,7 +10,7 @@ use hg_sim::{PlayerInput, State, World};
 
 fn run(players: u8, seed: u32, frames: u32) -> (Vec<u64>, Box<State>) {
     let mut world = World::new(0);
-    let mut state = world.initial_state(players, seed);
+    let mut state = world.initial_state(players, seed, 0);
     let mut rng = Rng::from_seed(seed ^ 0xABCD);
     let mut held = [0u16; MAX_PLAYERS];
     let mut sums = Vec::with_capacity(frames as usize);
@@ -40,7 +40,7 @@ fn when_different_seed_then_states_diverge() {
 fn when_restoring_snapshot_then_replay_matches() {
     let seed = 99;
     let mut world = World::new(0);
-    let mut state = world.initial_state(3, seed);
+    let mut state = world.initial_state(3, seed, 0);
     let mut rng = Rng::from_seed(7);
     let mut held = [0u16; MAX_PLAYERS];
     let mut log = Vec::new();
@@ -73,7 +73,7 @@ fn when_restoring_snapshot_then_replay_matches() {
 #[test]
 fn when_kiting_bots_play_then_game_progresses() {
     let mut world = World::new(0);
-    let mut state = world.initial_state(2, 42);
+    let mut state = world.initial_state(2, 42, 0);
     for _ in 0..60 * 60 * 3 {
         let inputs = kiting_inputs(&state, 2);
         world.step(&mut state, &inputs);
@@ -96,7 +96,7 @@ fn when_kiting_bots_play_then_game_progresses() {
 #[test]
 fn when_player_absent_long_enough_then_gone() {
     let mut world = World::new(0);
-    let mut state = world.initial_state(2, 5);
+    let mut state = world.initial_state(2, 5, 0);
     let present = PlayerInput(PlayerInput::PRESENT);
     for _ in 0..200 {
         world.step(
@@ -116,7 +116,7 @@ fn when_player_absent_long_enough_then_gone() {
 #[test]
 fn when_solo_player_idles_then_game_over_eventually() {
     let mut world = World::new(0);
-    let mut state = world.initial_state(1, 3);
+    let mut state = world.initial_state(1, 3, 0);
     let idle = [
         PlayerInput(PlayerInput::PRESENT),
         PlayerInput::default(),

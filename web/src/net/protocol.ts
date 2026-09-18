@@ -21,7 +21,7 @@ export type LobbyMsg =
   | { t: 'deny'; reason: DenyReason }
   | { t: 'roster'; members: MemberView[]; started: boolean }
   | { t: 'status'; ready: boolean; links: string[] }
-  | { t: 'start'; players: string[]; seed: number }
+  | { t: 'start'; players: string[]; seed: number; mode: number }
   | { t: 'lobby' };
 
 const REASONS: readonly DenyReason[] = ['rejected', 'timeout', 'full', 'started', 'version', 'kicked'];
@@ -60,7 +60,8 @@ export function parseLobbyMsg(raw: unknown): LobbyMsg | null {
     case 'start':
       if (!isStrArr(raw['players'], MAX_PLAYERS) || typeof raw['seed'] !== 'number') return null;
       if (raw['players'].length < 2 || !Number.isInteger(raw['seed'])) return null;
-      return { t: 'start', players: raw['players'], seed: raw['seed'] >>> 0 };
+      if (raw['mode'] !== 0 && raw['mode'] !== 1) return null;
+      return { t: 'start', players: raw['players'], seed: raw['seed'] >>> 0, mode: raw['mode'] };
     case 'lobby':
       return { t: 'lobby' };
     default:

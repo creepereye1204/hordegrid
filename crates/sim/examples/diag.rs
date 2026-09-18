@@ -11,7 +11,7 @@ fn main() {
         .and_then(|a| a.parse().ok())
         .unwrap_or(2);
     let mut world = World::new(0);
-    let mut s = world.initial_state(players, 42);
+    let mut s = world.initial_state(players, 42, 0);
     let mut rng = Rng::from_seed(0x2A ^ 0xABCD);
     let mut held = [0u16; 4];
     for f in 0..60 * 60 * 3u32 {

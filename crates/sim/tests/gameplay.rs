@@ -16,7 +16,7 @@ use hg_sim::{Fixed, World};
 #[test]
 fn when_playing_ten_minutes_then_no_enemy_is_stuck() {
     let mut world = World::new(0);
-    let mut s = world.initial_state(2, 2024);
+    let mut s = world.initial_state(2, 2024, 0);
     let mut last_pos = [(Fixed::ZERO, Fixed::ZERO); MAX_ENEMIES];
     let mut still = [0u32; MAX_ENEMIES];
     for _ in 0..60 * 60 * 10 {
@@ -82,7 +82,7 @@ fn when_playing_ten_minutes_then_no_enemy_is_stuck() {
 #[test]
 fn when_enemy_spawns_then_outside_all_cameras_or_no_hidden_door_existed() {
     let mut world = World::new(0);
-    let mut s = world.initial_state(4, 77);
+    let mut s = world.initial_state(4, 77, 0);
     let mut prev_alive = [0u8; MAX_ENEMIES];
     for _ in 0..60 * 60 * 4 {
         let inputs = kiting_inputs(&s, 4);

@@ -11,9 +11,9 @@ export async function loadWasm(): Promise<void> {
   memory = out.memory;
 }
 
-export function newGame(numPlayers: number, localHandle: number, seed: number, mapId = 0): Game {
+export function newGame(numPlayers: number, localHandle: number, seed: number, mapId = 0, mode = 0): Game {
   if (!memory) throw new Error('wasm not loaded');
-  return new Game(numPlayers, localHandle, seed >>> 0, mapId);
+  return new Game(numPlayers, localHandle, seed >>> 0, mapId, mode);
 }
 
 /**

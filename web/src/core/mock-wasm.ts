@@ -37,7 +37,8 @@ export class Game {
   private score = 0;
   private events: number[] = [];
 
-  constructor(private readonly players: number, private readonly local: number, _seed: number, _map: number) {
+  // Mock only demos survival; hide & seek (_mode) always looks like an ordinary solo game here.
+  constructor(private readonly players: number, private readonly local: number, _seed: number, _map: number, _mode = 0) {
     this.px = [18.5, 21.5, 18.5, 21.5];
     this.py = [14.5, 14.5, 15.5, 15.5];
   }

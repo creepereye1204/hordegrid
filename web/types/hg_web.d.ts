@@ -5,7 +5,7 @@ export interface InitOutput {
 }
 export default function init(module_or_path?: unknown): Promise<InitOutput>;
 export class Game {
-  constructor(num_players: number, local_handle: number, seed: number, map_id: number);
+  constructor(num_players: number, local_handle: number, seed: number, map_id: number, game_mode: number);
   free(): void;
   push_packet(slot: number, bytes: Uint8Array): void;
   tick(input_bits: number): number;

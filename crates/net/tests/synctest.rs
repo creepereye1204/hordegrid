@@ -20,7 +20,7 @@ fn when_rolling_back_every_frame_then_checksums_match() {
     }
     let mut session = builder.start_synctest_session().unwrap();
     let mut world = World::new(0);
-    let mut state = world.initial_state(players as u8, 555);
+    let mut state = world.initial_state(players as u8, 555, 0);
     let mut rng = Rng::from_seed(9);
     let mut held = [0u16; MAX_PLAYERS];
 

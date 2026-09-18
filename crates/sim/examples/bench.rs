@@ -12,7 +12,7 @@ use std::time::Instant;
 
 fn main() {
     let mut world = World::new(0);
-    let base = world.initial_state(4, 1);
+    let base = world.initial_state(4, 1, 0);
     let mut full = base.clone();
     let mut k = 0;
     for e in 0..MAX_ENEMIES {

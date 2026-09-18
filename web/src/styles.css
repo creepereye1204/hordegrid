@@ -26,6 +26,9 @@ html, body { margin: 0; height: 100%; color: var(--fg); overflow: hidden;
 .stack { display: grid; gap: 10px; width: min(340px, 100%); }
 .row { display: flex; gap: 8px; width: 100%; align-items: center; }
 .row > input { flex: 1; min-width: 0; }
+.mode-select { width: min(340px, 100%); background: #0b0c10; border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.mode-btn { flex: 1; min-height: 40px; background: transparent; color: var(--dim); box-shadow: none; }
+.mode-btn.active { background: linear-gradient(180deg, #6bdaff, var(--acc)); color: #001018; box-shadow: 0 2px 10px -3px #4fd1ff66; }
 button { font: inherit; font-weight: 700; color: var(--fg); background: #2a2e3b; border: 0; border-radius: 10px; min-height: 48px; padding: 10px 16px; cursor: pointer; touch-action: manipulation;
   transition: transform .08s ease, filter .08s ease; }
 button.primary { background: linear-gradient(180deg, #6bdaff, var(--acc)); color: #001018; box-shadow: 0 4px 18px -4px #4fd1ff66; }

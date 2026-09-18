@@ -14,7 +14,7 @@ use crate::grid::EnemyGrid;
 use crate::input::{dir_from_delta, PlayerInput, DIR8};
 use crate::map::MapData;
 use crate::physics::move_box;
-use crate::state::{EventKind, Life, State, WavePhase};
+use crate::state::{EventKind, GameMode, Life, State, WavePhase};
 
 /// Tile offsets for DIR8 indices (0 = none).
 const NEIGHBOUR: [(i32, i32); 9] = [
@@ -52,12 +52,13 @@ impl World {
         }
     }
 
-    /// Fresh initial state. Boxed: `State` is tens of KiB.
-    pub fn initial_state(&self, num_players: u8, seed: u32) -> Box<State> {
+    /// Fresh initial state. Boxed: `State` is tens of KiB. `mode` is [`GameMode`] as `u8`.
+    pub fn initial_state(&self, num_players: u8, seed: u32, mode: u8) -> Box<State> {
         let mut s: Box<State> = bytemuck::zeroed_box();
         let n = usize::from(num_players.clamp(1, MAX_PLAYERS as u8));
         s.header.num_players = n as u32;
         s.header.seed = seed;
+        s.header.mode = u32::from(mode);
         s.rng = crate::rng::Rng::from_seed(seed);
         for i in 0..n {
             let (tx, ty) = self.map.starts[i];
@@ -67,20 +68,30 @@ impl World {
             s.players.life[i] = Life::Alive as u8;
             s.players.facing[i] = 5;
         }
-        s.wave.phase = WavePhase::Intermission as u32;
-        s.wave.timer = INTERMISSION_FRAMES / 2;
-        s.wave.unlocked = 1; // pistol
-        flow::rebuild(&mut s, &self.map, &mut FlowScratch::default());
+        match s.mode() {
+            GameMode::Survival => {
+                s.wave.phase = WavePhase::Intermission as u32;
+                s.wave.timer = INTERMISSION_FRAMES / 2;
+                s.wave.unlocked = 1; // pistol
+                flow::rebuild(&mut s, &self.map, &mut FlowScratch::default());
+            }
+            GameMode::HideSeek => crate::hide_seek::init(&mut s),
+        }
         s
     }
 
     /// Advance one frame.
     pub fn step(&mut self, s: &mut State, inputs: &[PlayerInput; MAX_PLAYERS]) {
         s.header.frame = s.header.frame.wrapping_add(1);
+        let inputs = inputs.map(PlayerInput::sanitized);
+
+        if s.mode() == GameMode::HideSeek {
+            crate::hide_seek::step(s, &self.map, inputs);
+            return;
+        }
         if s.phase() == WavePhase::GameOver {
             return;
         }
-        let inputs = inputs.map(PlayerInput::sanitized);
 
         update_presence(s, inputs);
         update_players(s, &self.map, inputs);

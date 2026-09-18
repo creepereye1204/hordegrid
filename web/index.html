@@ -19,6 +19,11 @@
 <section id="screen-title" class="screen center" hidden>
   <div class="logo">HORDE<span>GRID</span></div>
   <p class="tagline">링크 하나로 친구와 좀비 떼를 쓸어버리는 협동 서바이벌</p>
+  <div class="row mode-select" role="radiogroup" aria-label="게임 종류">
+    <button type="button" id="mode-survival" class="mode-btn active" aria-pressed="true">생존 협동</button>
+    <button type="button" id="mode-hideseek" class="mode-btn" aria-pressed="false">숨바꼭질</button>
+  </div>
+  <p class="dim tiny">숨바꼭질은 방 만들기(호스트)에서만 적용 · 2명 이상 권장</p>
   <div class="stack">
     <button id="btn-create" class="primary">방 만들기</button>
     <form id="form-join" class="row">

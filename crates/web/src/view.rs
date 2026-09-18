@@ -6,7 +6,7 @@ use hg_sim::input::dir_from_delta;
 use hg_sim::State;
 
 /// Header length.
-pub const HEADER: usize = 16;
+pub const HEADER: usize = 17;
 /// Header field indices.
 pub mod h {
     /// Frame.
@@ -17,31 +17,36 @@ pub mod h {
     pub const N_ENEMIES: usize = 2;
     /// Shot records.
     pub const N_SHOTS: usize = 3;
-    /// Wave number.
+    /// Wave number (survival only).
     pub const WAVE: usize = 4;
-    /// Wave phase.
+    /// Phase: survival `WavePhase`, or hide & seek `HideSeekPhase` when `MODE == 1`.
     pub const PHASE: usize = 5;
-    /// Phase timer.
+    /// Timer for whichever phase `PHASE` names.
     pub const TIMER: usize = 6;
-    /// Team score.
+    /// Team score (survival only).
     pub const SCORE: usize = 7;
-    /// Combo.
+    /// Combo (survival only).
     pub const COMBO: usize = 8;
-    /// Combo timer.
+    /// Combo timer (survival only).
     pub const COMBO_TIMER: usize = 9;
-    /// Unlocked weapon mask.
+    /// Unlocked weapon mask (survival only).
     pub const UNLOCKED: usize = 10;
     /// Local player handle (-1 spectator).
     pub const LOCAL: usize = 11;
     /// Session player count.
     pub const NUM_PLAYERS: usize = 12;
-    /// Best combo.
+    /// Best combo (survival only).
     pub const BEST_COMBO: usize = 13;
-    /// Enemies left to spawn.
+    /// Enemies left to spawn (survival only).
     pub const TO_SPAWN: usize = 14;
+    /// Session mode: 0 survival, 1 hide & seek.
+    pub const MODE: usize = 15;
+    /// Hide & seek winner: 0 undecided, 1 hiders, 2 seeker. Always 0 in survival.
+    pub const HS_WINNER: usize = 16;
 }
-/// Player record stride: x, y, hp, life, facing, weapon, `hurt_flash`, `down_timer`, revive, kills.
-pub const PLAYER_STRIDE: usize = 10;
+/// Player record stride: x, y, hp, life, facing, weapon, `hurt_flash`, `down_timer`, revive,
+/// kills, hide-seek `role`, hide-seek `found` (last two unused/0 in survival).
+pub const PLAYER_STRIDE: usize = 12;
 /// Enemy record stride: slot, x, y, kind, `hp_permille`, stagger. `slot` keys interpolation.
 pub const ENEMY_STRIDE: usize = 6;
 /// Shot record stride: x, y, kind, dir.
@@ -54,11 +59,20 @@ pub const CAPACITY: usize =
 pub fn fill(out: &mut Vec<i32>, s: &State, local_handle: i32) {
     out.clear();
     out.resize(HEADER, 0);
+    let hide_seek = s.mode() == hg_sim::GameMode::HideSeek;
     out[h::FRAME] = s.header.frame as i32;
     out[h::N_PLAYERS] = MAX_PLAYERS as i32;
     out[h::WAVE] = s.wave.number as i32;
-    out[h::PHASE] = s.wave.phase as i32;
-    out[h::TIMER] = s.wave.timer as i32;
+    out[h::PHASE] = if hide_seek {
+        s.hide_seek.phase as i32
+    } else {
+        s.wave.phase as i32
+    };
+    out[h::TIMER] = if hide_seek {
+        s.hide_seek.timer as i32
+    } else {
+        s.wave.timer as i32
+    };
     out[h::SCORE] = s.wave.team_score as i32;
     out[h::COMBO] = s.wave.combo as i32;
     out[h::COMBO_TIMER] = s.wave.combo_timer as i32;
@@ -67,6 +81,8 @@ pub fn fill(out: &mut Vec<i32>, s: &State, local_handle: i32) {
     out[h::NUM_PLAYERS] = s.header.num_players as i32;
     out[h::BEST_COMBO] = s.wave.best_combo as i32;
     out[h::TO_SPAWN] = s.wave.to_spawn as i32;
+    out[h::MODE] = s.header.mode as i32;
+    out[h::HS_WINNER] = s.hide_seek.winner as i32;
 
     let p = &s.players;
     for i in 0..MAX_PLAYERS {
@@ -81,6 +97,8 @@ pub fn fill(out: &mut Vec<i32>, s: &State, local_handle: i32) {
             i32::from(p.down_timer[i]),
             i32::from(p.revive[i]),
             p.kills[i] as i32,
+            i32::from(s.hide_seek.role[i]),
+            i32::from(s.hide_seek.found[i]),
         ]);
     }
 
@@ -124,7 +142,7 @@ mod tests {
     #[test]
     fn when_filling_then_counts_and_length_agree() {
         let world = World::new(0);
-        let s = world.initial_state(2, 1);
+        let s = world.initial_state(2, 1, 0);
         let mut v = Vec::with_capacity(CAPACITY);
         fill(&mut v, &s, 0);
         let n_e = v[h::N_ENEMIES] as usize;

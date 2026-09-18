@@ -29,19 +29,27 @@ pub struct Game {
 #[wasm_bindgen]
 impl Game {
     /// Start a session. `num_players == 1` runs solo without networking.
+    /// `game_mode` is `hg_sim::GameMode` as `u8` (0 = survival, 1 = hide & seek).
     ///
     /// # Errors
     /// Invalid player count or handle.
     #[wasm_bindgen(constructor)]
-    pub fn new(num_players: u8, local_handle: u8, seed: u32, map_id: u8) -> Result<Game, JsError> {
+    pub fn new(
+        num_players: u8,
+        local_handle: u8,
+        seed: u32,
+        map_id: u8,
+        game_mode: u8,
+    ) -> Result<Game, JsError> {
         let mode = if num_players <= 1 {
-            Mode::Solo(Box::new(LocalRunner::new(seed, map_id)))
+            Mode::Solo(Box::new(LocalRunner::new(seed, map_id, game_mode)))
         } else {
             let runner = Runner::new(
                 num_players,
                 local_handle,
                 seed,
                 map_id,
+                game_mode,
                 NetSettings::default(),
             )
             .map_err(|e| JsError::new(&e.to_string()))?;

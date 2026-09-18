@@ -171,6 +171,60 @@ pub enum EventKind {
     GameOver = 8,
     /// Shot fired (a = weapon).
     Fire = 9,
+    /// Hide & seek: a hider was spotted long enough to be caught (a = player index).
+    Found = 10,
+    /// Hide & seek: round decided (a = winner, 1 hiders / 2 seeker).
+    RoundEnd = 11,
+}
+
+/// Session game mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GameMode {
+    /// Waves of zombies, weapons, revives.
+    Survival = 0,
+    /// One seeker finds hiders by sight; see `crate::hide_seek`.
+    HideSeek = 1,
+}
+
+impl GameMode {
+    /// Decode from storage; unknown values map to `Survival`.
+    pub const fn from_u32(v: u32) -> Self {
+        match v {
+            1 => Self::HideSeek,
+            _ => Self::Survival,
+        }
+    }
+}
+
+/// Hide & seek round phase.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HideSeekPhase {
+    /// Hiders can move; the seeker is frozen and blind. Counts down to `Seeking`.
+    Hiding = 0,
+    /// Seeker can move and see; round timer runs until everyone is found or time runs out.
+    Seeking = 1,
+    /// Round decided; nobody moves.
+    RoundOver = 2,
+}
+
+/// Hide & seek mode state. Only meaningful when `Header::mode == GameMode::HideSeek as u32`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct HideSeek {
+    /// 1 = seeker, 0 = hider.
+    pub role: [u8; MAX_PLAYERS],
+    /// 1 once caught.
+    pub found: [u8; MAX_PLAYERS],
+    /// Consecutive frames currently in the seeker's sight (debounces `found`).
+    pub spot_frames: [u16; MAX_PLAYERS],
+    /// [`HideSeekPhase`] as u32.
+    pub phase: u32,
+    /// Frames left in the current phase.
+    pub timer: u32,
+    /// 0 = undecided, 1 = hiders win, 2 = seeker wins.
+    pub winner: u32,
 }
 
 /// One feedback event.
@@ -235,6 +289,8 @@ pub struct Header {
     pub seed: u32,
     /// Map id.
     pub map_id: u32,
+    /// [`GameMode`] as u32.
+    pub mode: u32,
 }
 
 /// The whole rollback-able world.
@@ -257,6 +313,8 @@ pub struct State {
     pub events: EventRing,
     /// Pathing.
     pub flow: FlowField,
+    /// Hide & seek mode state (unused when `mode() == GameMode::Survival`).
+    pub hide_seek: HideSeek,
 }
 
 impl State {
@@ -282,6 +340,11 @@ impl State {
     /// Player life.
     pub fn life(&self, i: usize) -> Life {
         Life::from_u8(self.players.life[i])
+    }
+
+    /// Session game mode.
+    pub fn mode(&self) -> GameMode {
+        GameMode::from_u32(self.header.mode)
     }
 
     pub(crate) fn emit(&mut self, kind: EventKind, a: u8, x: Fixed, y: Fixed) {

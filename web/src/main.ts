@@ -5,6 +5,7 @@ import { loadWasm } from './core/wasm';
 import { InputController } from './input/controller';
 import { TouchInput } from './input/touch';
 import { Match, type MatchResult } from './match';
+import { GameMode } from './core/view-layout';
 import { Lobby, type LobbyEvent, type Outgoing } from './net/lobby';
 import type { DenyReason } from './net/protocol';
 import { NetRoom } from './net/room';
@@ -46,6 +47,23 @@ const DENY_TEXT: Record<DenyReason, string> = {
 function nickname(): string {
   return sanitizeName($<HTMLInputElement>('nickname').value);
 }
+
+// ---------------------------------------------------------------- game mode
+
+let selectedMode: 0 | 1 = GameMode.Survival;
+const modeButtons: Record<0 | 1, HTMLElement> = { [GameMode.Survival]: $('mode-survival'), [GameMode.HideSeek]: $('mode-hideseek') };
+
+function setMode(m: 0 | 1): void {
+  selectedMode = m;
+  for (const [k, btn] of Object.entries(modeButtons)) {
+    const active = Number(k) === m;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  }
+}
+
+modeButtons[GameMode.Survival].addEventListener('click', () => setMode(GameMode.Survival));
+modeButtons[GameMode.HideSeek].addEventListener('click', () => setMode(GameMode.HideSeek));
 
 function relayOverride(): string[] {
   return new URLSearchParams(location.search).getAll('relay').filter((u) => /^wss?:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/.test(u));
@@ -164,7 +182,7 @@ function handleLobbyEvent(ev: LobbyEvent): void {
     case 'start': {
       const local = ev.players.indexOf(o.room.selfId);
       if (local < 0) return;
-      startMatch(local, ev.seed, ev.players);
+      startMatch(local, ev.seed, ev.players, ev.mode === GameMode.HideSeek ? 1 : 0);
       break;
     }
     case 'back-to-lobby':
@@ -252,7 +270,7 @@ $('btn-ready').addEventListener('click', () => {
 
 $('btn-start').addEventListener('click', () => {
   const o = online;
-  if (o) dispatch(o.lobby.start(randomU32()));
+  if (o) dispatch(o.lobby.start(randomU32(), selectedMode));
 });
 
 $('btn-leave').addEventListener('click', () => toTitle());
@@ -267,11 +285,11 @@ async function leaveOnline(): Promise<void> {
 
 // ---------------------------------------------------------------- match
 
-function startMatch(localHandle: number, seed: number, players: string[] | null): void {
+function startMatch(localHandle: number, seed: number, players: string[] | null, mode: 0 | 1 = 0): void {
   stopMatch();
   const o = online;
   const net = players && o ? { players, send: (peer: string, bytes: Uint8Array) => o.room.sendGame(peer, bytes) } : null;
-  match = new Match({ renderer, effects, audio, input }, localHandle, seed, net, onGameOver);
+  match = new Match({ renderer, effects, audio, input }, localHandle, seed, net, onGameOver, mode);
   showScreen('game');
   input.refreshTouchVisibility(true);
   void requestWakeLock();
@@ -285,16 +303,22 @@ function stopMatch(): void {
 }
 
 function onGameOver(r: MatchResult): void {
-  $('over-summary').textContent = `WAVE ${r.wave} · 점수 ${r.score.toLocaleString('ko-KR')} · 최고 콤보 x${r.bestCombo}`;
-  $('over-players').replaceChildren(
-    ...r.kills.map((k, i) =>
-      el('li', {}, [
-        Object.assign(el('span', { className: 'dot', text: String(i + 1) }), { style: `background:${PLAYER_COLORS[i] ?? '#888'}` }),
-        el('span', { className: 'name', text: `${i + 1}P` }),
-        el('span', { className: 'badge', text: `${k} 킬` }),
-      ]),
-    ),
-  );
+  if (r.mode === GameMode.HideSeek) {
+    const localWon = (r.role === 1 && r.winner === 2) || (r.role === 0 && r.winner === 1);
+    $('over-summary').textContent = `${localWon ? '승리' : '패배'} · ${r.winner === 2 ? '술래가 모두 찾았습니다' : '숨는 사람이 끝까지 버텼습니다'}`;
+    $('over-players').replaceChildren();
+  } else {
+    $('over-summary').textContent = `WAVE ${r.wave} · 점수 ${r.score.toLocaleString('ko-KR')} · 최고 콤보 x${r.bestCombo}`;
+    $('over-players').replaceChildren(
+      ...r.kills.map((k, i) =>
+        el('li', {}, [
+          Object.assign(el('span', { className: 'dot', text: String(i + 1) }), { style: `background:${PLAYER_COLORS[i] ?? '#888'}` }),
+          el('span', { className: 'name', text: `${i + 1}P` }),
+          el('span', { className: 'badge', text: `${k} 킬` }),
+        ]),
+      ),
+    );
+  }
   const isGuest = online?.lobby.role === 'guest';
   $('btn-over-primary').hidden = isGuest;
   $('over-wait').hidden = !isGuest;

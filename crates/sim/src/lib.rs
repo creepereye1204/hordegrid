@@ -14,6 +14,7 @@ pub mod config;
 pub mod flow;
 pub mod fx;
 pub mod grid;
+pub mod hide_seek;
 pub mod input;
 pub mod map;
 pub mod physics;
@@ -23,5 +24,5 @@ pub mod step;
 
 pub use fx::Fixed;
 pub use input::PlayerInput;
-pub use state::State;
+pub use state::{GameMode, State};
 pub use step::World;

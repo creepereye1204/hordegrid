@@ -100,9 +100,9 @@ struct SimHost {
 }
 
 impl SimHost {
-    fn new(num_players: u8, seed: u32, map_id: u8) -> Self {
+    fn new(num_players: u8, seed: u32, map_id: u8, mode: u8) -> Self {
         let world = World::new(map_id);
-        let state = world.initial_state(num_players, seed);
+        let state = world.initial_state(num_players, seed, mode);
         Self { world, state }
     }
 }
@@ -131,6 +131,7 @@ impl Runner {
         local_handle: u8,
         seed: u32,
         map_id: u8,
+        mode: u8,
         settings: NetSettings,
     ) -> Result<Self, SessionError> {
         if num_players < 2 || usize::from(num_players) > MAX_PLAYERS || local_handle >= num_players
@@ -162,7 +163,7 @@ impl Runner {
         Ok(Self {
             session,
             queues,
-            host: SimHost::new(num_players, seed, map_id),
+            host: SimHost::new(num_players, seed, map_id, mode),
             local_handle: usize::from(local_handle),
             skip_frames: 0,
             events: Vec::new(),
@@ -320,9 +321,9 @@ pub struct LocalRunner {
 
 impl LocalRunner {
     /// New solo game.
-    pub fn new(seed: u32, map_id: u8) -> Self {
+    pub fn new(seed: u32, map_id: u8, mode: u8) -> Self {
         Self {
-            host: SimHost::new(1, seed, map_id),
+            host: SimHost::new(1, seed, map_id, mode),
         }
     }
 

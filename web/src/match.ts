@@ -1,6 +1,6 @@
 // One running game: owns the wasm Game, fixed loop, renderer feed and packet plumbing.
 import { FixedLoop } from './core/loop';
-import { EventKind, H, HEADER, Life, NetEventCode, P, Phase, PLAYER_STRIDE, WEAPON_NAMES } from './core/view-layout';
+import { EventKind, GameMode, H, HEADER, HideSeekPhase, Life, NetEventCode, P, Phase, PLAYER_STRIDE, WEAPON_NAMES } from './core/view-layout';
 import { iterOutbox, newGame, renderView, type Game } from './core/wasm';
 import type { InputController } from './input/controller';
 import type { Audio } from './render/audio';
@@ -15,12 +15,23 @@ export interface MatchNet {
   send(peerId: string, bytes: Uint8Array): void;
 }
 
-export interface MatchResult {
+export interface SurvivalResult {
+  mode: 0;
   wave: number;
   score: number;
   bestCombo: number;
   kills: number[];
 }
+
+export interface HideSeekResult {
+  mode: 1;
+  /** 1 = hiders won, 2 = seeker won. */
+  winner: number;
+  /** Local player's role this round: 0 hider, 1 seeker. */
+  role: number;
+}
+
+export type MatchResult = SurvivalResult | HideSeekResult;
 
 export class Match {
   readonly game: Game;
@@ -37,9 +48,10 @@ export class Match {
     seed: number,
     private readonly net: MatchNet | null,
     private readonly onOver: (r: MatchResult) => void,
+    private readonly mode: 0 | 1 = 0,
   ) {
     const numPlayers = net ? net.players.length : 1;
-    this.game = newGame(numPlayers, localHandle, seed);
+    this.game = newGame(numPlayers, localHandle, seed, 0, mode);
     deps.renderer.setMap(this.game.map_width(), this.game.map_height(), this.game.map_tiles());
     deps.renderer.resize();
     deps.renderer.pushStep(renderView(this.game));
@@ -142,6 +154,15 @@ export class Match {
           banner(`WAVE ${a}`);
           audio.play('wave');
           break;
+        case EventKind.Found:
+          toast(a === this.localHandle ? '들켰습니다!' : `${a + 1}P 발견`);
+          audio.play('down');
+          if (a === this.localHandle) navigator.vibrate?.([80, 40, 80]);
+          break;
+        case EventKind.RoundEnd:
+          banner(a === 2 ? '술래 승리' : '숨는 사람 승리');
+          audio.play('wave');
+          break;
         default:
           break;
       }
@@ -153,13 +174,52 @@ export class Match {
     renderer.draw(alpha, effects);
     const v = renderer.latest;
     if (!v) return;
+    if (this.mode === GameMode.HideSeek) {
+      if (++this.hudFrame % 3 === 0) this.updateHideSeekHud(v);
+      if (!this.over && v[H.PHASE] === HideSeekPhase.RoundOver) {
+        this.over = true;
+        const role = v[HEADER + this.localHandle * PLAYER_STRIDE + P.ROLE]!;
+        this.onOver({ mode: 1, winner: v[H.HS_WINNER]!, role });
+      }
+      return;
+    }
     if (++this.hudFrame % 3 === 0) this.updateHud(v);
     if (!this.over && v[H.PHASE] === Phase.GameOver) {
       this.over = true;
       const kills: number[] = [];
       for (let i = 0; i < (v[H.NUM_PLAYERS] ?? 1); i++) kills.push(v[HEADER + i * PLAYER_STRIDE + P.KILLS]!);
-      this.onOver({ wave: v[H.WAVE]!, score: v[H.SCORE]!, bestCombo: v[H.BEST_COMBO]!, kills });
+      this.onOver({ mode: 0, wave: v[H.WAVE]!, score: v[H.SCORE]!, bestCombo: v[H.BEST_COMBO]!, kills });
     }
+  }
+
+  private updateHideSeekHud(v: Int32Array): void {
+    const phase = v[H.PHASE]!;
+    const timerSec = Math.ceil(v[H.TIMER]! / 60);
+    const o = HEADER + this.localHandle * PLAYER_STRIDE;
+    const isSeeker = v[o + P.ROLE] === 1;
+    const phaseText =
+      phase === HideSeekPhase.Hiding ? `숨는 시간 ${timerSec}초` : phase === HideSeekPhase.Seeking ? `추격 중 ${timerSec}초` : '라운드 종료';
+    setText($('hud-wave'), `${isSeeker ? '술래' : '숨는 사람'} · ${phaseText}`);
+    let found = 0;
+    const numPlayers = v[H.NUM_PLAYERS] ?? 1;
+    for (let i = 0; i < numPlayers; i++) {
+      const oi = HEADER + i * PLAYER_STRIDE;
+      if (v[oi + P.ROLE] === 0 && v[oi + P.FOUND] === 1) found++;
+    }
+    setText($('hud-score'), `${found}명 발견`);
+    setText($('hud-combo'), '');
+    setText($('hud-weapon'), '');
+    let net = this.netHud;
+    if (!net && this.net) {
+      const pings: string[] = [];
+      for (let i = 0; i < this.net.players.length; i++) {
+        if (i === this.localHandle) continue;
+        const p = this.game.ping_ms(i);
+        pings.push(p >= 0 ? `${i + 1}P ${p}ms` : `${i + 1}P -`);
+      }
+      net = pings.join(' · ');
+    }
+    setText($('hud-net'), net);
   }
 
   private updateHud(v: Int32Array): void {
