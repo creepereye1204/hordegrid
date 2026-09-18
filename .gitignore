@@ -2,4 +2,3 @@ target/
 node_modules/
 web/dist/
 web/src/wasm-pkg/
-*.png

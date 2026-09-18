@@ -4,6 +4,7 @@ import {
 } from '../core/view-layout';
 import type { Effects } from './effects';
 import { C } from './palette';
+import { sprites } from './sprites';
 
 const VIEW_TILES_W = 24;
 const VIEW_TILES_H = 16;
@@ -33,6 +34,7 @@ export class Renderer {
   constructor(private readonly canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('Canvas2D unavailable');
+    ctx.imageSmoothingEnabled = false; // pixel art stays crisp when scaled to tile size
     this.ctx = ctx;
   }
 
@@ -136,10 +138,20 @@ export class Renderer {
       const sx = (x - ox) * t;
       const sy = (y - oy) * t;
       if (sx < -t || sy < -t || sx > this.cssW + t || sy > this.cssH + t) continue;
-      ctx.fillStyle = v[o + E.STAGGER]! > 3 ? '#ffffff' : kind === 1 ? C.runner : C.walker;
-      ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
       ctx.fillStyle = '#00000055';
-      ctx.fillRect(sx - r, sy + r * 0.35, r * 2, r * 0.65);
+      ctx.beginPath();
+      ctx.ellipse(sx, sy + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const sprite = kind === 1 ? sprites.runner : sprites.walker;
+      ctx.drawImage(sprite, sx - r, sy - r, r * 2, r * 2);
+      if (v[o + E.STAGGER]! > 3) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+        ctx.restore();
+      }
       const hp = v[o + E.HP_PERMILLE]!;
       if (hp < 1000) {
         ctx.fillStyle = C.danger;
@@ -177,12 +189,15 @@ export class Renderer {
           ctx.stroke();
         }
       }
-      ctx.fillStyle = v[o + P.HURT]! > 0 ? '#ffffff' : color;
+      ctx.save();
       ctx.globalAlpha = life === Life.Downed ? 0.55 : 1;
-      ctx.beginPath();
-      ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.drawImage(sprites.hero, sx - r, sy - r, r * 2, r * 2);
+      // team-color wash so players stay distinguishable without a palette of tinted sprites
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = v[o + P.HURT]! > 0 ? '#ffffff' : color;
+      ctx.globalAlpha *= v[o + P.HURT]! > 0 ? 0.85 : 0.45;
+      ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+      ctx.restore();
       // facing
       const [fx, fy] = DIR_VEC[v[o + P.FACING]!] ?? [0, 1];
       ctx.strokeStyle = '#0e0f13';
@@ -237,15 +252,12 @@ export class Renderer {
       c.height = this.mapH * t;
       const g = c.getContext('2d');
       if (!g) return;
+      g.imageSmoothingEnabled = false;
       for (let y = 0; y < this.mapH; y++) {
         for (let x = 0; x < this.mapW; x++) {
           const wall = this.tiles[y * this.mapW + x] === 1;
-          g.fillStyle = wall ? C.wall : (x + y) % 2 ? C.floor : C.floorAlt;
-          g.fillRect(x * t, y * t, t, t);
-          if (wall) {
-            g.fillStyle = C.wallTop;
-            g.fillRect(x * t, y * t, t, Math.max(2, t * 0.18));
-          }
+          const sprite = wall ? sprites.wall : (x + y) % 2 ? sprites.floor : sprites.floorAlt;
+          g.drawImage(sprite, x * t, y * t, t, t);
         }
       }
       this.floorCache = c;

@@ -49,7 +49,14 @@ export class TouchInput {
   private readonly onDown = (e: PointerEvent): void => {
     const target = e.target as HTMLElement;
     const action = target.closest<HTMLElement>('[data-action]')?.dataset['action'];
-    this.root.setPointerCapture?.(e.pointerId);
+    // Capture is best-effort (keeps move/up events if the finger drifts off the element).
+    // It throws NotFoundError on some mobile browsers/timings; losing capture must never
+    // also lose the tap itself, or fire/move presses silently do nothing.
+    try {
+      this.root.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* no active pointer to capture — continue handling the tap anyway */
+    }
     e.preventDefault();
     if (action === 'fire' || action === 'next' || action === 'place') {
       this.held.set(e.pointerId, action);

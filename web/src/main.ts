@@ -12,6 +12,7 @@ import { NetRoom } from './net/room';
 import { Audio } from './render/audio';
 import { Effects } from './render/effects';
 import { Renderer } from './render/renderer';
+import { loadSprites } from './render/sprites';
 import { $, el, PLAYER_COLORS, showScreen } from './ui/dom';
 
 const BUILD = __BUILD_HASH__;
@@ -407,7 +408,7 @@ async function boot(): Promise<void> {
     $('title-msg').textContent = '인앱 브라우저에서는 연결이 불안정할 수 있어요. Safari/Chrome으로 열어주세요.';
   }
   try {
-    await loadWasm();
+    await Promise.all([loadWasm(), loadSprites()]);
   } catch (err) {
     console.error(err);
     $('loading-text').textContent = '게임을 불러오지 못했습니다. 새로고침해 주세요.';
