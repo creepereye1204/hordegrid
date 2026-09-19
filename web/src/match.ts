@@ -122,10 +122,11 @@ export class Match {
       const y = ev[i + 4]! / 65536;
       switch (kind) {
         case EventKind.Fire:
-          audio.play('fire');
+          audio.playFire(a);
           break;
         case EventKind.Hit:
           effects.burst(x, y, '#d8d8c0', 2, 0.08);
+          audio.playHit();
           break;
         case EventKind.Kill:
           effects.burst(x, y, a === 1 ? C.runner : C.walker, 10, 0.16);
@@ -162,6 +163,9 @@ export class Match {
         case EventKind.RoundEnd:
           banner(a === 2 ? '술래 승리' : '숨는 사람 승리');
           audio.play('wave');
+          break;
+        case EventKind.ReloadStart:
+          audio.play('reload');
           break;
         default:
           break;
@@ -240,7 +244,9 @@ export class Match {
     const life = v[o + P.LIFE]!;
     const weapon = WEAPON_NAMES[v[o + P.WEAPON]!] ?? '?';
     const status = life === Life.Downed ? '쓰러짐' : life === Life.Dead ? '다음 웨이브에 부활' : `HP ${Math.max(0, v[o + P.HP]!)}`;
-    setText($('hud-weapon'), `${weapon} · ${status}`);
+    const ammo = v[o + P.AMMO]!;
+    const ammoText = v[o + P.RELOAD_TIMER]! > 0 ? ' · 재장전 중' : ammo >= 0 ? ` · 탄약 ${ammo}` : '';
+    setText($('hud-weapon'), `${weapon} · ${status}${ammoText}`);
     let net = this.netHud;
     if (!net && this.net) {
       const pings: string[] = [];

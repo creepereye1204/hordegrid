@@ -124,6 +124,7 @@ export class Game {
       v[o + 4] = this.facing[p]!;
       v[o + 7] = 400;
       v[o + 8] = p === 2 ? 60 : 0;
+      v[o + 12] = -1; // mock always "carries" the infinite-ammo pistol
     }
     this.enemies.forEach((e, k) => {
       v.set([k, Math.round(e.x * ONE), Math.round(e.y * ONE), k % 2, Math.round((e.hp / 3) * 1000), 0], o);

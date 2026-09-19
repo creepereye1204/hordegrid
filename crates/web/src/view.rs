@@ -45,8 +45,9 @@ pub mod h {
     pub const HS_WINNER: usize = 16;
 }
 /// Player record stride: x, y, hp, life, facing, weapon, `hurt_flash`, `down_timer`, revive,
-/// kills, hide-seek `role`, hide-seek `found` (last two unused/0 in survival).
-pub const PLAYER_STRIDE: usize = 12;
+/// kills, hide-seek `role`, hide-seek `found` (unused/0 in survival), `ammo` (-1 = infinite),
+/// `reload_timer` (frames left, 0 = not reloading).
+pub const PLAYER_STRIDE: usize = 14;
 /// Enemy record stride: slot, x, y, kind, `hp_permille`, stagger. `slot` keys interpolation.
 pub const ENEMY_STRIDE: usize = 6;
 /// Shot record stride: x, y, kind, dir.
@@ -99,6 +100,15 @@ pub fn fill(out: &mut Vec<i32>, s: &State, local_handle: i32) {
             p.kills[i] as i32,
             i32::from(s.hide_seek.role[i]),
             i32::from(s.hide_seek.found[i]),
+            {
+                let w = usize::from(p.weapon[i]);
+                if hg_sim::config::WEAPONS[w].max_ammo == hg_sim::config::INFINITE_AMMO {
+                    -1
+                } else {
+                    i32::from(p.ammo[i][w])
+                }
+            },
+            i32::from(p.reload_timer[i]),
         ]);
     }
 

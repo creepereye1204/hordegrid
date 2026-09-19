@@ -5,6 +5,7 @@ export const Bits = {
   STRAFE: 1 << 6,
   WEAPON_NEXT: 1 << 7,
   WEAPON_PREV: 1 << 8,
+  RELOAD: 1 << 9,
 } as const;
 
 export interface InputFrame {
@@ -16,10 +17,11 @@ export interface InputFrame {
   strafe: boolean;
   weaponNext: boolean;
   weaponPrev: boolean;
+  reload: boolean;
 }
 
 export const emptyInput = (): InputFrame => ({
-  moveX: 0, moveY: 0, fire: false, place: false, strafe: false, weaponNext: false, weaponPrev: false,
+  moveX: 0, moveY: 0, fire: false, place: false, strafe: false, weaponNext: false, weaponPrev: false, reload: false,
 });
 
 const TAN_67_5 = 2.4142;
@@ -59,5 +61,6 @@ export function encode(f: InputFrame, dir: number): number {
   if (f.strafe) bits |= Bits.STRAFE;
   if (f.weaponNext) bits |= Bits.WEAPON_NEXT;
   if (f.weaponPrev) bits |= Bits.WEAPON_PREV;
+  if (f.reload) bits |= Bits.RELOAD;
   return bits;
 }

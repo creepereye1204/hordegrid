@@ -1,6 +1,6 @@
 import type { InputFrame } from './encode';
 
-const MAP: Record<string, keyof Pick<InputFrame, 'fire' | 'place' | 'strafe' | 'weaponNext' | 'weaponPrev'> | 'up' | 'down' | 'left' | 'right'> = {
+const MAP: Record<string, keyof Pick<InputFrame, 'fire' | 'place' | 'strafe' | 'weaponNext' | 'weaponPrev' | 'reload'> | 'up' | 'down' | 'left' | 'right'> = {
   KeyW: 'up', ArrowUp: 'up',
   KeyS: 'down', ArrowDown: 'down',
   KeyA: 'left', ArrowLeft: 'left',
@@ -9,6 +9,7 @@ const MAP: Record<string, keyof Pick<InputFrame, 'fire' | 'place' | 'strafe' | '
   KeyF: 'place', KeyK: 'place',
   ShiftLeft: 'strafe', ShiftRight: 'strafe',
   KeyE: 'weaponNext', KeyQ: 'weaponPrev',
+  KeyR: 'reload',
 };
 
 export class KeyboardInput {
@@ -48,5 +49,6 @@ export class KeyboardInput {
     f.strafe ||= d.has('strafe');
     f.weaponNext ||= d.has('weaponNext');
     f.weaponPrev ||= d.has('weaponPrev');
+    f.reload ||= d.has('reload');
   }
 }

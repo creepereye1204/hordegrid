@@ -2,7 +2,7 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::config::{EVENT_RING, MAX_ENEMIES, MAX_PLAYERS, MAX_SHOTS, TILES};
+use crate::config::{EVENT_RING, MAX_ENEMIES, MAX_PLAYERS, MAX_SHOTS, TILES, WEAPON_COUNT};
 use crate::fx::Fixed;
 use crate::rng::Rng;
 
@@ -67,6 +67,10 @@ pub struct Players {
     pub absent: [u16; MAX_PLAYERS],
     /// Revives performed.
     pub revives_done: [u16; MAX_PLAYERS],
+    /// Ammo remaining per weapon kind (persists across weapon switches). See `config::INFINITE_AMMO`.
+    pub ammo: [[u16; WEAPON_COUNT]; MAX_PLAYERS],
+    /// Frames left in an in-progress reload; 0 = not reloading.
+    pub reload_timer: [u16; MAX_PLAYERS],
 }
 
 /// Enemies, structure-of-arrays.
@@ -175,6 +179,10 @@ pub enum EventKind {
     Found = 10,
     /// Hide & seek: round decided (a = winner, 1 hiders / 2 seeker).
     RoundEnd = 11,
+    /// Reload started (a = weapon).
+    ReloadStart = 12,
+    /// Reload finished, ammo refilled (a = weapon).
+    ReloadDone = 13,
 }
 
 /// Session game mode.

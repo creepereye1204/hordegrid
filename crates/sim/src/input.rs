@@ -20,8 +20,10 @@ impl PlayerInput {
     pub const WEAPON_NEXT: u16 = 1 << 7;
     /// Previous weapon held.
     pub const WEAPON_PREV: u16 = 1 << 8;
+    /// Reload pressed.
+    pub const RELOAD: u16 = 1 << 9;
     /// Reserved bits that must be zero.
-    pub const RESERVED: u16 = 0x7E00;
+    pub const RESERVED: u16 = 0x7C00;
     /// Player is connected. GGRS feeds `Default` (0) for disconnected players.
     pub const PRESENT: u16 = 1 << 15;
 
@@ -97,7 +99,10 @@ mod tests {
     #[test]
     fn when_bits_invalid_then_sanitized() {
         assert_eq!(PlayerInput(0x000F).sanitized().dir(), 0);
-        assert_eq!(PlayerInput(0x7E00 | 3).sanitized().0, 3);
+        assert_eq!(PlayerInput(PlayerInput::RESERVED | 3).sanitized().0, 3);
+        assert!(PlayerInput(PlayerInput::RELOAD)
+            .sanitized()
+            .has(PlayerInput::RELOAD));
         assert!(PlayerInput(PlayerInput::PRESENT)
             .sanitized()
             .has(PlayerInput::PRESENT));

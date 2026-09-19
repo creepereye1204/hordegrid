@@ -19,6 +19,6 @@
 | TD-012 | L | 샷건 DDA 히트스캔 대신 투사체, 탄약·설치물(바리케이드/폭발통)·Spitter/Brute 미구현 | 콘텐츠는 마지막 (PRODUCT_SENSE) | Phase 3 | Open |
 | TD-013 | L | RenderView를 매 스텝 `slice()` 복사(≈3KiB/스텝) — 문서상 zero-copy와 다름 | 보간에 이전 스텝 필요, 비용 무시 가능 | 렌더 p95 B 미달 시 | Open |
 | TD-014 | M | PWA(manifest/SW)·렌더 품질 강등·가로 회전 강제 전체화면 미구현 | 모바일 기본 조작 우선 | Phase 3 | Open |
-| TD-015 | L | 총소리가 `render/audio.ts` 오실레이터 합성음뿐, 샘플 기반 리얼 사운드 아님 | 출시 임박, 새 에셋/오디오 파이프라인은 안정화 이후로 | 출시 후, 무기별 사운드 필요해지면 | Open |
-| TD-016 | L | 무기 3종(권총/기관단총/샷건)뿐, 종류 확장 미구현 | 출시 임박, 밸런싱·이벤트·UI 텍스트까지 같이 손대야 해서 범위 큼 | 출시 후, [product-specs/weapons-and-enemies.md](../product-specs/weapons-and-enemies.md) 기준 7종까지 | Open |
+| TD-015 | L | ~~총소리가 오실레이터 합성음뿐~~ → Kenney Sci-fi Sounds(CC0) 샘플로 교체 완료(발사 4종+피격) | — | 완료 | Done |
+| TD-016 | L | 무기 4종(권총/기관단총/샷건/로켓, 탄약+장전 포함)까지 구현. 나머지 3종(바리케이드·폭발통·레일건)은 설치형이거나 관통형이라 범위 밖 | 출시 임박, 나머지는 새 충돌/설치 로직 필요 | 출시 후, [product-specs/weapons-and-enemies.md](../product-specs/weapons-and-enemies.md) 기준 7종까지 | Open |
 | TD-017 | M | 기지 건설(플레이어가 직접 짓는 거점/바리케이드) 시스템 전체 미구현 | 출시 임박, 완전히 새로운 게임플레이 축이라 sim 상태·렌더·UI·밸런싱 전부 새로 설계해야 함 | 출시 후, 별도 exec-plan(0004~)으로 설계부터 | Open |

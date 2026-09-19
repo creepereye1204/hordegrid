@@ -68,16 +68,24 @@ pub const PLAYER_COUNT_MUL_X100: [u32; MAX_PLAYERS + 1] = [100, 100, 162, 216, 2
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WeaponKind {
-    /// Starting weapon.
+    /// Starting weapon. Infinite ammo, never reloads.
     Pistol = 0,
     /// Fast, low damage, jitter.
     Smg = 1,
     /// Short-range pellet fan.
     Shotgun = 2,
+    /// Slow, splash damage on impact (docs/product-specs/weapons-and-enemies.md #6).
+    Rocket = 3,
 }
 
 /// Number of weapon kinds.
-pub const WEAPON_COUNT: usize = 3;
+pub const WEAPON_COUNT: usize = 4;
+
+/// Ammo value meaning "never runs out, never reloads" (the starting pistol).
+pub const INFINITE_AMMO: u16 = u16::MAX;
+
+/// Frames a reload takes, same for every weapon (kept simple on purpose).
+pub const RELOAD_FRAMES: u16 = 60;
 
 /// Immutable weapon tuning.
 #[derive(Clone, Copy, Debug)]
@@ -96,6 +104,10 @@ pub struct WeaponStats {
     pub pellets: u8,
     /// Perpendicular spread per pellet step / max jitter (tiles/frame).
     pub spread: Fixed,
+    /// Ammo pool capacity. [`INFINITE_AMMO`] = never depletes, never reloads.
+    pub max_ammo: u16,
+    /// Splash radius on impact; [`Fixed::ZERO`] = single-target only.
+    pub splash_radius: Fixed,
 }
 
 /// Weapon table indexed by [`WeaponKind`].
@@ -108,6 +120,8 @@ pub const WEAPONS: [WeaponStats; WEAPON_COUNT] = [
         ttl: 30,
         pellets: 1,
         spread: Fixed::ZERO,
+        max_ammo: INFINITE_AMMO,
+        splash_radius: Fixed::ZERO,
     },
     WeaponStats {
         unlock_score: 1_500,
@@ -117,6 +131,8 @@ pub const WEAPONS: [WeaponStats; WEAPON_COUNT] = [
         ttl: 28,
         pellets: 1,
         spread: Fixed::ratio(4, 100),
+        max_ammo: 240,
+        splash_radius: Fixed::ZERO,
     },
     WeaponStats {
         unlock_score: 4_000,
@@ -126,6 +142,19 @@ pub const WEAPONS: [WeaponStats; WEAPON_COUNT] = [
         ttl: 10,
         pellets: 5,
         spread: Fixed::ratio(8, 100),
+        max_ammo: 60,
+        splash_radius: Fixed::ZERO,
+    },
+    WeaponStats {
+        unlock_score: 16_000,
+        damage: 60,
+        cooldown: 50,
+        speed: Fixed::ratio(45, 100),
+        ttl: 40,
+        pellets: 1,
+        spread: Fixed::ZERO,
+        max_ammo: 20,
+        splash_radius: Fixed::from_int(2),
     },
 ];
 

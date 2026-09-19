@@ -3,10 +3,10 @@
 
 use crate::config::{
     EnemyKind, ABSENT_FRAMES, COMBO_CAP, COMBO_FRAMES, DOWNED_FRAMES, DOWNED_SPEED, ENEMIES,
-    INTERMISSION_FRAMES, KNOCKBACK, MAX_ENEMIES, MAX_PLAYERS, MAX_SHOTS, PLAYER_COUNT_MUL_X100,
-    PLAYER_HP, PLAYER_RADIUS, PLAYER_SPEED, RESPAWN_HP, REVIVE_FRAMES, REVIVE_HP, REVIVE_RANGE,
-    SHOT_RADIUS, SPAWN_INTERVAL, STAGGER_FRAMES, VIEW_HALF_H, VIEW_HALF_W, WEAPONS, WEAPON_COUNT,
-    WEAPON_SWITCH_FRAMES,
+    INFINITE_AMMO, INTERMISSION_FRAMES, KNOCKBACK, MAX_ENEMIES, MAX_PLAYERS, MAX_SHOTS,
+    PLAYER_COUNT_MUL_X100, PLAYER_HP, PLAYER_RADIUS, PLAYER_SPEED, RELOAD_FRAMES, RESPAWN_HP,
+    REVIVE_FRAMES, REVIVE_HP, REVIVE_RANGE, SHOT_RADIUS, SPAWN_INTERVAL, STAGGER_FRAMES,
+    VIEW_HALF_H, VIEW_HALF_W, WEAPONS, WEAPON_COUNT, WEAPON_SWITCH_FRAMES,
 };
 use crate::flow::{self, FlowScratch};
 use crate::fx::Fixed;
@@ -162,9 +162,7 @@ fn update_players(s: &mut State, map: &MapData, inputs: [PlayerInput; MAX_PLAYER
                 } else if input.pressed(prev, PlayerInput::WEAPON_PREV) {
                     cycle_weapon(s, i, WEAPON_COUNT - 1);
                 }
-                if input.has(PlayerInput::FIRE) && s.players.cooldown[i] == 0 {
-                    fire(s, i);
-                }
+                update_reload_and_fire(s, i, input, prev);
             }
             Life::Downed => {
                 let (ux, uy) = DIR8[usize::from(input.dir())];
@@ -198,7 +196,41 @@ fn cycle_weapon(s: &mut State, i: usize, step: usize) {
     }
     if usize::from(s.players.weapon[i]) != w {
         s.players.weapon[i] = w as u8;
+        s.players.reload_timer[i] = 0; // switching cancels an in-progress reload of the old weapon
         s.players.cooldown[i] = s.players.cooldown[i].max(WEAPON_SWITCH_FRAMES);
+    }
+}
+
+/// Runs the reload state machine, then fires if the trigger is pulled and the weapon is ready.
+#[allow(clippy::many_single_char_names)] // s/i/w/x/y are conventional here
+fn update_reload_and_fire(s: &mut State, i: usize, input: PlayerInput, prev: PlayerInput) {
+    let w = usize::from(s.players.weapon[i]);
+    let infinite = WEAPONS[w].max_ammo == INFINITE_AMMO;
+
+    if s.players.reload_timer[i] > 0 {
+        s.players.reload_timer[i] -= 1;
+        if s.players.reload_timer[i] == 0 {
+            s.players.ammo[i][w] = WEAPONS[w].max_ammo;
+            let (x, y) = (s.players.x[i], s.players.y[i]);
+            s.emit(EventKind::ReloadDone, w as u8, x, y);
+        }
+        return;
+    }
+
+    let has_ammo = infinite || s.players.ammo[i][w] > 0;
+    let wants_reload = !infinite
+        && s.players.ammo[i][w] < WEAPONS[w].max_ammo
+        && (input.pressed(prev, PlayerInput::RELOAD)
+            || (input.has(PlayerInput::FIRE) && !has_ammo));
+    if wants_reload {
+        s.players.reload_timer[i] = RELOAD_FRAMES;
+        let (x, y) = (s.players.x[i], s.players.y[i]);
+        s.emit(EventKind::ReloadStart, w as u8, x, y);
+    } else if input.has(PlayerInput::FIRE) && s.players.cooldown[i] == 0 && has_ammo {
+        if !infinite {
+            s.players.ammo[i][w] -= 1;
+        }
+        fire(s, i);
     }
 }
 
@@ -403,6 +435,12 @@ fn update_shots(s: &mut State, map: &MapData, grid: &EnemyGrid) {
             s.shots.x[j] = x;
             s.shots.y[j] = y;
             if map.solid(x.floor_int(), y.floor_int()) {
+                let w = usize::from(s.shots.kind[j]).min(WEAPON_COUNT - 1);
+                let splash = WEAPONS[w].splash_radius;
+                if splash > Fixed::ZERO {
+                    let owner = usize::from(s.shots.owner[j]).min(MAX_PLAYERS - 1);
+                    splash_damage(s, map, x, y, s.shots.damage[j], splash, owner, MAX_ENEMIES);
+                }
                 s.shots.ttl[j] = 0;
                 break;
             }
@@ -430,9 +468,47 @@ fn update_shots(s: &mut State, map: &MapData, grid: &EnemyGrid) {
 
 fn hit_enemy(s: &mut State, map: &MapData, e: usize, shot: usize) {
     let owner = usize::from(s.shots.owner[shot]).min(MAX_PLAYERS - 1);
+    let damage = s.shots.damage[shot];
+    let w = usize::from(s.shots.kind[shot]).min(WEAPON_COUNT - 1);
+    let dir = dir_from_delta(s.shots.vx[shot], s.shots.vy[shot]);
+    let (sx, sy) = (s.shots.x[shot], s.shots.y[shot]);
+    damage_enemy(s, map, e, damage, owner, dir);
+    let splash = WEAPONS[w].splash_radius;
+    if splash > Fixed::ZERO {
+        splash_damage(s, map, sx, sy, damage, splash, owner, e);
+    }
+}
+
+/// Damage every alive enemy within `radius` of `(x, y)`, `exclude` already handled by the caller.
+#[allow(clippy::too_many_arguments)] // one impact event's worth of plain scalars, a struct would just move them
+fn splash_damage(
+    s: &mut State,
+    map: &MapData,
+    x: Fixed,
+    y: Fixed,
+    damage: u8,
+    radius: Fixed,
+    owner: usize,
+    exclude: usize,
+) {
+    let r_sq = radius.sq();
+    for e in 0..MAX_ENEMIES {
+        if e == exclude || s.enemies.alive[e] == 0 {
+            continue;
+        }
+        if Fixed::len_sq(s.enemies.x[e] - x, s.enemies.y[e] - y) > r_sq {
+            continue;
+        }
+        let dir = dir_from_delta(s.enemies.x[e] - x, s.enemies.y[e] - y);
+        damage_enemy(s, map, e, damage, owner, dir);
+    }
+}
+
+/// Apply damage to one enemy: kill (score/combo/unlock) or stagger + knockback along `dir`.
+fn damage_enemy(s: &mut State, map: &MapData, e: usize, damage: u8, owner: usize, dir: u8) {
     let kind = usize::from(s.enemies.kind[e]).min(ENEMIES.len() - 1);
     let stats = ENEMIES[kind];
-    s.enemies.hp[e] -= i32::from(s.shots.damage[shot]);
+    s.enemies.hp[e] -= i32::from(damage);
     let (x, y) = (s.enemies.x[e], s.enemies.y[e]);
     if s.enemies.hp[e] <= 0 {
         s.enemies.alive[e] = 0;
@@ -449,7 +525,6 @@ fn hit_enemy(s: &mut State, map: &MapData, e: usize, shot: usize) {
         s.emit(EventKind::Kill, kind as u8, x, y);
         unlock_weapons(s);
     } else {
-        let dir = dir_from_delta(s.shots.vx[shot], s.shots.vy[shot]);
         let (ux, uy) = DIR8[usize::from(dir)];
         let (nx, ny) = move_box(map, x, y, ux * KNOCKBACK, uy * KNOCKBACK, stats.radius);
         s.enemies.x[e] = nx;
@@ -464,6 +539,9 @@ fn unlock_weapons(s: &mut State) {
         let bit = 1u32 << w;
         if s.wave.unlocked & bit == 0 && s.wave.team_score >= stats.unlock_score {
             s.wave.unlocked |= bit;
+            for i in 0..MAX_PLAYERS {
+                s.players.ammo[i][w] = stats.max_ammo;
+            }
             s.emit(EventKind::Unlock, w as u8, Fixed::ZERO, Fixed::ZERO);
         }
     }
