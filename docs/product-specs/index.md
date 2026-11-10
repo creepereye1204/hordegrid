@@ -8,5 +8,6 @@
 | [core-gameplay.md](core-gameplay.md) | Ready | 2 | 이동·조준·발사·웨이브·다운/부활·게임오버 |
 | [mobile-play.md](mobile-play.md) | Ready | 2–3 | 폰 브라우저 1급 지원: 가로 전용, 플로팅 스틱, 수명주기, PWA |
 | [weapons-and-enemies.md](weapons-and-enemies.md) | Draft | 2–3 | 무기 7종 해금 곡선, 적 4종, 설치물 2종 수치표 |
+| [multiplier-and-upgrades.md](multiplier-and-upgrades.md) | Ready | 3 | 킬 배율(1단계 감쇠·창 축소)과 배율 임계 무기·강화 해금 — 원작 디컴파일 근거 |
 
 상태: `Draft`(논의 중) → `Ready`(구현 가능) → `Shipped`(AC 전부 자동/수동 검증됨)

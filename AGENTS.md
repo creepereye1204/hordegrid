@@ -25,7 +25,7 @@
 | CI/배포 | [RELIABILITY.md](docs/RELIABILITY.md), [references/github-pages-llms.txt](docs/references/github-pages-llms.txt) |
 | 설계·최적화·품질 기준 | [patterns.md](docs/design-docs/patterns.md), [performance.md](docs/design-docs/performance.md), [code-quality.md](docs/design-docs/code-quality.md), [QUALITY_SCORE.md](docs/QUALITY_SCORE.md) |
 | 모바일 | [mobile-play.md](docs/product-specs/mobile-play.md) — 모든 UI/입력 변경은 터치에서도 동작해야 함 |
-| 기능 추가 판단 | [PRODUCT_SENSE.md](docs/PRODUCT_SENSE.md) |
+| 기능 추가 판단 | [PRODUCT_SENSE.md](docs/PRODUCT_SENSE.md), 장르 원작 실측: [boxhead-2play-teardown.md](docs/references/boxhead-2play-teardown.md) — "박스헤드는 이랬다"를 기억으로 쓰지 말고 여기부터 |
 | 연결 실측 | [tools/net-probe](tools/net-probe/README.md), [0002](docs/exec-plans/active/0002-connectivity-spike.md) |
 | 외부 API | `docs/references/*-llms.txt` — **기억으로 API 쓰지 말고 여기부터**, 없으면 조사 후 추가 |
 
