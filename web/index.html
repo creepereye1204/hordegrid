@@ -23,7 +23,12 @@
     <button type="button" id="mode-survival" class="mode-btn active" aria-pressed="true">생존 협동</button>
     <button type="button" id="mode-hideseek" class="mode-btn" aria-pressed="false">숨바꼭질</button>
   </div>
-  <p class="dim tiny">숨바꼭질은 방 만들기(호스트)에서만 적용 · 2명 이상 권장</p>
+  <div class="row mode-select" role="radiogroup" aria-label="맵">
+    <button type="button" id="map-0" class="mode-btn active" aria-pressed="true">마당</button>
+    <button type="button" id="map-1" class="mode-btn" aria-pressed="false">지하묘지</button>
+    <button type="button" id="map-2" class="mode-btn" aria-pressed="false">마을</button>
+  </div>
+  <p class="dim tiny">게임 종류·맵은 혼자 연습과 방 만들기(호스트)에 적용 · 숨바꼭질은 2명 이상 권장</p>
   <div class="stack">
     <button id="btn-create" class="primary">방 만들기</button>
     <form id="form-join" class="row">

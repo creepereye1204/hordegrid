@@ -17,7 +17,7 @@ export type LobbyEvent =
   | { kind: 'admitted' }
   | { kind: 'denied'; reason: DenyReason }
   | { kind: 'roster'; members: MemberView[] }
-  | { kind: 'start'; players: string[]; seed: number; mode: number }
+  | { kind: 'start'; players: string[]; seed: number; mode: number; map: number }
   | { kind: 'back-to-lobby' }
   | { kind: 'host-left' };
 
@@ -176,13 +176,13 @@ export class Lobby {
     return null;
   }
 
-  start(salt: number, mode = 0): Outgoing[] {
+  start(salt: number, mode = 0, map = 0): Outgoing[] {
     if (this.startBlocker() !== null) return [];
     const players = [...this.members.keys()].sort();
     const seed = seedFromIds(players, salt);
     this.started = true;
-    this.events.push({ kind: 'start', players, seed, mode });
-    return [{ to: 'members', msg: { t: 'start', players, seed, mode } }];
+    this.events.push({ kind: 'start', players, seed, mode, map });
+    return [{ to: 'members', msg: { t: 'start', players, seed, mode, map } }];
   }
 
   /** After game over: everyone back to the lobby, readiness reset. */
@@ -236,7 +236,7 @@ export class Lobby {
         return [];
       case 'start':
         if (from !== this.hostId || !this.admitted || !msg.players.includes(this.selfId)) return [];
-        this.events.push({ kind: 'start', players: msg.players, seed: msg.seed, mode: msg.mode });
+        this.events.push({ kind: 'start', players: msg.players, seed: msg.seed, mode: msg.mode, map: msg.map });
         return [];
       case 'lobby':
         if (from !== this.hostId) return [];

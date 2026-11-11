@@ -2,6 +2,7 @@
 import { FixedLoop } from './core/loop';
 import { EventKind, GameMode, H, HEADER, HideSeekPhase, Life, NetEventCode, P, Phase, PLAYER_STRIDE, WEAPON_NAMES } from './core/view-layout';
 import { iterOutbox, newGame, renderView, type Game } from './core/wasm';
+import type { MapId } from './render/tilemap';
 import type { InputController } from './input/controller';
 import type { Audio } from './render/audio';
 import type { Effects } from './render/effects';
@@ -49,10 +50,11 @@ export class Match {
     private readonly net: MatchNet | null,
     private readonly onOver: (r: MatchResult) => void,
     private readonly mode: 0 | 1 = 0,
+    mapId: MapId = 0,
   ) {
     const numPlayers = net ? net.players.length : 1;
-    this.game = newGame(numPlayers, localHandle, seed, 0, mode);
-    deps.renderer.setMap(this.game.map_width(), this.game.map_height(), this.game.map_tiles());
+    this.game = newGame(numPlayers, localHandle, seed, mapId, mode);
+    deps.renderer.setMap(this.game.map_width(), this.game.map_height(), this.game.map_tiles(), mapId);
     deps.renderer.resize();
     deps.renderer.pushStep(renderView(this.game));
     this.loop = new FixedLoop(

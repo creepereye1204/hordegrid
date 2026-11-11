@@ -5,6 +5,7 @@ import {
 import type { Effects } from './effects';
 import { C } from './palette';
 import { sprites } from './sprites';
+import { MAP_BG, type MapId, paintMap } from './tilemap';
 
 const VIEW_TILES_W = 24;
 const VIEW_TILES_H = 16;
@@ -21,6 +22,7 @@ export class Renderer {
   private mapW = 0;
   private mapH = 0;
   private tiles: Uint8Array = new Uint8Array();
+  private mapId: MapId = 0;
   private floorCache: HTMLCanvasElement | null = null;
   private cachedTile = 0;
   private tile = 24;
@@ -38,7 +40,8 @@ export class Renderer {
     this.ctx = ctx;
   }
 
-  setMap(w: number, h: number, tiles: Uint8Array): void {
+  setMap(w: number, h: number, tiles: Uint8Array, mapId: MapId = 0): void {
+    this.mapId = mapId;
     this.mapW = w;
     this.mapH = h;
     this.tiles = tiles;
@@ -84,7 +87,7 @@ export class Renderer {
   draw(alpha: number, effects: Effects): void {
     const v = this.cur;
     const ctx = this.ctx;
-    ctx.fillStyle = C.bg;
+    ctx.fillStyle = MAP_BG[this.mapId];
     ctx.fillRect(0, 0, this.cssW, this.cssH);
     if (!v) return;
     const t = this.tile;
@@ -253,13 +256,7 @@ export class Renderer {
       const g = c.getContext('2d');
       if (!g) return;
       g.imageSmoothingEnabled = false;
-      for (let y = 0; y < this.mapH; y++) {
-        for (let x = 0; x < this.mapW; x++) {
-          const wall = this.tiles[y * this.mapW + x] === 1;
-          const sprite = wall ? sprites.wall : (x + y) % 2 ? sprites.floor : sprites.floorAlt;
-          g.drawImage(sprite, x * t, y * t, t, t);
-        }
-      }
+      paintMap(g, this.mapId, this.tiles, this.mapW, this.mapH, t);
       this.floorCache = c;
       this.cachedTile = t;
     }

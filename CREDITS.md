@@ -3,9 +3,17 @@
 ## Art
 
 - **Tiny Dungeon** sprite pack — [Kenney](https://kenney.nl), licensed [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
-  Used in `web/src/assets/sprites/`: `hero.png`, `walker.png`, `runner.png`, `wall.png`, `floor.png`, `floor-alt.png`
-  (individual 16x16 tiles from the pack, renamed for clarity). No attribution is legally required by CC0; this credit
-  is given voluntarily per Kenney's request.
+  Used in `web/src/assets/sprites/`: `hero.png`, `walker.png`, `runner.png` (individual 16x16 tiles from the pack,
+  renamed for clarity) and `dungeon-sheet.png` (the pack's `Tilemap/tilemap_packed.png`, used for the yard and crypt maps).
+  No attribution is legally required by CC0; this credit is given voluntarily per Kenney's request.
+- **Tiny Town** sprite pack — [Kenney](https://kenney.nl), licensed [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Used as `web/src/assets/sprites/town-sheet.png` (the pack's `Tilemap/tilemap_packed.png`) for the town map.
+
+## Maps
+
+- **Crypt** (`crates/sim/src/map.rs`, `CRYPT`) — converted from Tiny Dungeon's `Tiled/sampleMap.tmx` by Kenney (CC0)
+  with `tools/map-import/tmx2ascii.py`.
+- **Town** (`TOWN`) — layout traced from Tiny Town's `Sample.png` scene by Kenney (CC0).
 
 ## Audio
 
